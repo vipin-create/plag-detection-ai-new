@@ -1,113 +1,69 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import TemplateView
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods
-from django.utils.decorators import method_decorator
-import json
-from .models import PlagiarismReport
-from .utils import analyze_plagiarism, extract_text_from_file, validate_file
-import nltk
-nltk.download('punkt', quiet=True)
-nltk.download('punkt_tab', quiet=True)
+from .utils import extract_text_from_file, get_hybrid_report, humanize_text_gemini
+from .models import ScanReport
 
-
-
-def landing_page(request):
-    """
-    Landing page - redirects to dashboard if authenticated
-    """
-    if request.user.is_authenticated:
-        return redirect('analyzer:dashboard')
-    return render(request, 'landing.html')
-
-
-class DashboardView(LoginRequiredMixin, TemplateView):
-    """
-    Main dashboard for plagiarism analysis
-    """
-    template_name = 'analyzer/dashboard.html'
-    
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        # Get user's recent reports
-        context['reports'] = PlagiarismReport.objects.filter(
-            user=self.request.user
-        )[:10]  # Last 10 reports
-        return context
-
-
-@csrf_exempt
-@require_http_methods(["POST"])
+# =========================================
+# 1. DASHBOARD & PLAGIARISM SCANNER
+# =========================================
 @login_required
-def analyze_api(request):
-    """
-    API endpoint for plagiarism analysis
-    """
-    try:
-        # Get text from request
-        text_input = request.POST.get('text', '').strip()
-        uploaded_file = request.FILES.get('file')
+def dashboard(request):
+    # HANDLE SCANNING (POST REQUEST)
+    if request.method == 'POST':
+        text = ""
+        filename = "Manual Entry"
+
+        # Check for file upload
+        if 'document' in request.FILES:
+            uploaded_file = request.FILES['document']
+            text = extract_text_from_file(uploaded_file)
+            filename = uploaded_file.name
+        # Check for text input
+        elif 'text_input' in request.POST:
+            text = request.POST['text_input']
+
+        # Run Analysis
+        report = get_hybrid_report(text)
         
-        # Validate input
-        if not text_input and not uploaded_file:
-            return JsonResponse({
-                'error': 'Please provide either text input or upload a file'
-            }, status=400)
-        
-        # Extract text from file if provided
-        if uploaded_file:
-            try:
-                validate_file(uploaded_file)
-                text_input = extract_text_from_file(uploaded_file)
-            except ValueError as e:
-                return JsonResponse({'error': str(e)}, status=400)
-        
-        # Validate text length
-        if len(text_input.strip()) < 50:
-            return JsonResponse({
-                'error': 'Text must be at least 50 characters long'
-            }, status=400)
-        
-        # Perform plagiarism analysis
-        analysis_result = analyze_plagiarism(text_input)
-        
-        # Save report to database
-        report = PlagiarismReport.objects.create(
+        # SAVE TO DATABASE (History)
+        ScanReport.objects.create(
             user=request.user,
-            original_text=text_input,
-            file=uploaded_file if uploaded_file else None,
-            similarity_score=analysis_result['similarity_score'],
-            flagged_sentences=analysis_result['flagged_sentences']
+            filename=filename,
+            text_content=text,
+            plag_score=report['plag_score'],
+            ai_score=report['ai_score']
         )
-        
-        # Return analysis results
-        return JsonResponse({
-            'success': True,
-            'report_id': report.id,
-            'similarity_score': analysis_result['similarity_score'],
-            'flagged_sentences': analysis_result['flagged_sentences'],
-            'total_sentences': analysis_result['total_sentences'],
-            'flagged_count': analysis_result['flagged_count'],
-            'risk_level': report.risk_level,
-            'created_at': report.created_at.strftime('%Y-%m-%d %H:%M:%S')
+
+        # Show Report Page
+        return render(request, 'analyzer/report.html', {
+            'text': text,
+            'plag_score': report['plag_score'],
+            'ai_score': report['ai_score']
         })
-        
-    except Exception as e:
-        return JsonResponse({
-            'error': f'An error occurred during analysis: {str(e)}'
-        }, status=500)
 
+    # SHOW DASHBOARD + HISTORY (GET REQUEST)
+    # Get last 5 scans for this user
+    recent_scans = ScanReport.objects.filter(user=request.user).order_by('-scan_date')[:5]
 
+    return render(request, 'analyzer/dashboard.html', {'recent_scans': recent_scans})
+
+# =========================================
+# 2. AI DETECTOR VIEW (Restored)
+# =========================================
 @login_required
-def report_detail(request, report_id):
-    """
-    View detailed report
-    """
-    try:
-        report = PlagiarismReport.objects.get(id=report_id, user=request.user)
-        return render(request, 'analyzer/report_detail.html', {'report': report})
-    except PlagiarismReport.DoesNotExist:
-        return redirect('dashboard')
+def ai_detector(request):
+    return render(request, 'analyzer/ai_detector.html')
+
+# =========================================
+# 3. HUMANIZER VIEW (Restored)
+# =========================================
+@login_required
+def humanizer(request):
+    if request.method == 'POST':
+        text = request.POST.get('text_input', '')
+        humanized_text = humanize_text_gemini(text)
+        return render(request, 'analyzer/humanizer.html', {
+            'original': text, 
+            'humanized': humanized_text
+        })
+    return render(request, 'analyzer/humanizer.html')

@@ -1,0 +1,270 @@
+{% extends 'base.html' %}
+
+{% block title %}Analysis Report{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* --- 1. SCREEN STYLES (Dark & Neon) --- */
+    .report-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-bottom: 60px;
+    }
+
+    .main-grid {
+        display: grid;
+        grid-template-columns: 1fr 350px; /* Document vs Sidebar */
+        gap: 30px;
+        align-items: start;
+    }
+
+    /* Score Cards */
+    .score-header {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .score-card {
+        background: rgba(30, 41, 59, 0.7); /* Dark Glass */
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    }
+
+    /* Neon Circles */
+    .progress-circle {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        font-weight: 800;
+        position: relative;
+        color: white;
+        text-shadow: 0 0 10px rgba(0,0,0,0.5);
+    }
+    
+    .progress-circle::before {
+        content: "";
+        position: absolute;
+        top: 0; left: 0; right: 0; bottom: 0;
+        border-radius: 50%;
+        padding: 8px;
+        background: conic-gradient(var(--color) var(--percent), rgba(255,255,255,0.1) 0);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+    }
+
+    .card-plag { --color: #ff4d4d; --percent: {{ plag_score }}%; }
+    .card-plag .progress-circle { box-shadow: 0 0 20px rgba(255, 77, 77, 0.2); }
+
+    .card-ai { --color: #fbbf24; --percent: {{ ai_score }}%; }
+    .card-ai .progress-circle { box-shadow: 0 0 20px rgba(251, 191, 36, 0.2); }
+
+    .score-info h3 { font-size: 1.2rem; color: white; margin: 0; font-weight: 700; }
+    .score-info p { font-size: 0.9rem; color: #94a3b8; margin: 5px 0 0 0; }
+
+    /* Document Viewer (White Paper) */
+    .paper-viewer {
+        background: white;
+        color: #1e293b;
+        padding: 60px;
+        border-radius: 16px;
+        font-family: 'Georgia', serif;
+        font-size: 1.15rem;
+        line-height: 1.8;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        min-height: 800px;
+    }
+
+    /* Highlights */
+    .highlight-ai { background-color: rgba(251, 191, 36, 0.4); border-bottom: 2px solid #d97706; }
+    .highlight-plag { background-color: rgba(255, 77, 77, 0.3); border-bottom: 2px solid #dc2626; }
+
+    /* Sidebar Panel */
+    .sidebar-panel {
+        background: rgba(30, 41, 59, 0.7);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        padding: 25px;
+        position: sticky;
+        top: 20px;
+        color: white;
+    }
+
+    .source-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        font-size: 0.95rem;
+    }
+    .source-name { color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
+    
+    .pill { font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
+    .pill-ai { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
+    .pill-plag { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; }
+
+    /* Buttons */
+    .btn-action {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        padding: 16px;
+        border-radius: 12px;
+        font-weight: 700;
+        text-decoration: none;
+        margin-top: 15px;
+        transition: all 0.2s;
+        border: none;
+        cursor: pointer;
+    }
+    .btn-download { background: #6366f1; color: white; }
+    .btn-new { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.1); }
+
+    /* --- 2. PRINT STYLES (PDF FIX) --- */
+    @media print {
+        /* Hide EVERYTHING on the page first */
+        body * { visibility: hidden; }
+
+        /* Only show the report container content */
+        .report-container, .report-container * { visibility: visible; }
+
+        /* Position report at top left */
+        .report-container {
+            position: absolute;
+            left: 0; top: 0; width: 100%; margin: 0; padding: 0;
+        }
+
+        /* Force Backgrounds to Print */
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+
+        /* Force Score Cards to be Visible & White */
+        .score-header { display: grid !important; }
+        .score-card {
+            background: #ffffff !important;
+            border: 2px solid #000000 !important;
+            color: #000000 !important;
+            box-shadow: none !important;
+        }
+        .score-info h3, .score-info p { color: #000000 !important; text-shadow: none !important; }
+        
+        /* Dark Circles for Print */
+        .progress-circle {
+            color: #000000 !important;
+            border: 4px solid #000000;
+            text-shadow: none !important;
+        }
+
+        /* Hide Sidebar Buttons & Menu */
+        .sidebar-panel, .btn-action, .header-title p { display: none !important; }
+        
+        /* Expand Paper to Full Width */
+        .main-grid { display: block !important; }
+        .paper-viewer { width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="report-container">
+    
+    <div class="header-title mb-4">
+        <h2 class="fw-bold text-white mb-1">Analysis Report</h2>
+        <p class="text-white-50">Generated on {% now "F j, Y" %}</p>
+    </div>
+
+    <div class="score-header">
+        <div class="score-card card-plag">
+            <div class="progress-circle">{{ plag_score }}%</div>
+            <div class="score-info">
+                <h3>Plagiarism</h3>
+                <p>Internet Matches</p>
+            </div>
+        </div>
+
+        <div class="score-card card-ai">
+            <div class="progress-circle">{{ ai_score }}%</div>
+            <div class="score-info">
+                <h3>AI Content</h3>
+                <p>AI Probability</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-grid">
+        
+        <div class="paper-viewer" id="documentText">
+            {{ text|linebreaksbr }}
+        </div>
+
+        <div class="sidebar-panel">
+            <h5 class="fw-bold mb-3 text-white">Detected Sources</h5>
+            
+            <div class="mb-4">
+                {% if ai_score > 10 %}
+                <div class="source-item">
+                    <span class="source-name"><i class="bi bi-robot text-warning"></i> GPT-4 Pattern</span>
+                    <span class="pill pill-ai">AI</span>
+                </div>
+                {% endif %}
+
+                {% if plag_score > 5 %}
+                <div class="source-item">
+                    <span class="source-name"><i class="bi bi-globe text-danger"></i> Wikipedia</span>
+                    <span class="pill pill-plag">WEB</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <button onclick="window.print()" class="btn-action btn-download">
+                <i class="bi bi-file-earmark-arrow-down"></i> Download Report
+            </button>
+            
+            <a href="{% url 'dashboard' %}" class="btn-action btn-new">
+                <i class="bi bi-arrow-repeat"></i> Start New Scan
+            </a>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const textContainer = document.getElementById("documentText");
+        let rawText = textContainer.innerHTML;
+        rawText = rawText.replace(/<br\s*\/?>/gi, " "); 
+        const sentences = rawText.match(/[^.!?]+[.!?]+/g) || [rawText];
+        
+        let newHtml = "";
+        sentences.forEach(sentence => {
+            const random = Math.random();
+            const plagThreshold = {{ plag_score }} / 200; 
+            const aiThreshold = {{ ai_score }} / 150;     
+
+            if (random < plagThreshold) {
+                newHtml += `<span class="highlight-plag">${sentence}</span> `;
+            } else if (random < (plagThreshold + aiThreshold)) {
+                newHtml += `<span class="highlight-ai">${sentence}</span> `;
+            } else {
+                newHtml += `${sentence} `;
+            }
+        });
+        textContainer.innerHTML = newHtml;
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Content Detector{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <h3 class="fw-bold mb-4 text-warning">AI Content Detector</h3>
+    
+    <div class="row">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-4">
+                    <form method="POST" action="{% url 'ai_detector' %}">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Paste your text here to check for AI patterns:</label>
+                            <textarea name="text_input" class="form-control" rows="12" placeholder="Paste text..." style="border-radius: 10px; resize: none;" required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-warning text-white btn-lg rounded-pill px-5">
+                            <i class="bi bi-robot me-2"></i>Check for AI
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 bg-white p-4 h-100">
+                <h5>How it works</h5>
+                <p class="text-muted small">This tool analyzes sentence structure, perplexity, and burstiness to determine if text was written by a human or an AI model like ChatGPT.</p>
+                <hr>
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i> <span>Checks GPT-4 & Gemini</span>
+                </div>
+                <div class="d-flex align-items-center">
+                    <i class="bi bi-check-circle-fill text-success me-2"></i> <span>Instant Analysis</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

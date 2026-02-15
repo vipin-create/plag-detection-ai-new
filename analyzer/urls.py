@@ -1,10 +1,12 @@
 from django.urls import path
-from .views import DashboardView, analyze_api, report_detail
-
-app_name = 'analyzer'
+from . import views
 
 urlpatterns = [
-    path('dashboard/', DashboardView.as_view(), name='dashboard'),
-    path('api/analyze/', analyze_api, name='analyze_api'),
-    path('report/<int:report_id>/', report_detail, name='report_detail'),
+    # 1. This handles the empty homepage http://127.0.0.1:8000/
+    path('', views.dashboard, name='index'), 
+    
+    # 2. Your specific tool pages
+    path('plagiarism-scanner/', views.dashboard, name='dashboard'),
+    path('ai-detector/', views.ai_detector, name='ai_detector'),
+    path('humanizer/', views.humanizer, name='humanizer'),
 ]

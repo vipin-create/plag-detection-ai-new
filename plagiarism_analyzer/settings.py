@@ -130,7 +130,7 @@ AUTH_USER_MODEL = 'accounts.CustomUser'
 
 # Login/Logout URLs
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/dashboard/'
+LOGIN_REDIRECT_URL = 'dashboard'
 LOGOUT_REDIRECT_URL = '/'
 
 # Default primary key field type
