@@ -13,7 +13,7 @@
 
     .main-grid {
         display: grid;
-        grid-template-columns: 1fr 350px; /* Document vs Sidebar */
+        grid-template-columns: 1fr 350px;
         gap: 30px;
         align-items: start;
     }
@@ -27,7 +27,7 @@
     }
 
     .score-card {
-        background: rgba(30, 41, 59, 0.7); /* Dark Glass */
+        background: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 20px;
@@ -65,16 +65,16 @@
         mask-composite: exclude;
     }
 
-    .card-plag { --color: #ff4d4d; --percent: {{ plag_score }}%; }
-    .card-plag .progress-circle { box-shadow: 0 0 20px rgba(255, 77, 77, 0.2); }
+    .card-plag { --color: #ff4d4d; --percent: {{ plag_score|default:0 }}%; }
+    .card-plag .progress-circle { box-shadow: 0 0 20px rgba(255, 77, 77, 0.3); }
 
-    .card-ai { --color: #fbbf24; --percent: {{ ai_score }}%; }
-    .card-ai .progress-circle { box-shadow: 0 0 20px rgba(251, 191, 36, 0.2); }
+    .card-ai { --color: #fbbf24; --percent: {{ ai_score|default:0 }}%; }
+    .card-ai .progress-circle { box-shadow: 0 0 20px rgba(251, 191, 36, 0.3); }
 
     .score-info h3 { font-size: 1.2rem; color: white; margin: 0; font-weight: 700; }
     .score-info p { font-size: 0.9rem; color: #94a3b8; margin: 5px 0 0 0; }
 
-    /* Document Viewer (White Paper) */
+    /* Document Viewer */
     .paper-viewer {
         background: white;
         color: #1e293b;
@@ -87,37 +87,20 @@
         min-height: 800px;
     }
 
-    /* Highlights */
-    .highlight-ai { background-color: rgba(251, 191, 36, 0.4); border-bottom: 2px solid #d97706; }
-    .highlight-plag { background-color: rgba(255, 77, 77, 0.3); border-bottom: 2px solid #dc2626; }
+    .highlight-ai { background-color: rgba(251, 191, 36, 0.35); border-bottom: 2px solid #fbbf24; }
+    .highlight-plag { background-color: rgba(255, 77, 77, 0.25); border-bottom: 2px solid #ff4d4d; }
 
-    /* Sidebar Panel */
+    /* Sidebar */
     .sidebar-panel {
-        background: rgba(30, 41, 59, 0.7);
+        background: rgba(30, 41, 59, 0.8);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
         border-radius: 20px;
         padding: 25px;
         position: sticky;
         top: 20px;
-        color: white;
     }
 
-    .source-item {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 12px 0;
-        border-bottom: 1px solid rgba(255,255,255,0.1);
-        font-size: 0.95rem;
-    }
-    .source-name { color: #e2e8f0; display: flex; align-items: center; gap: 8px; }
-    
-    .pill { font-size: 0.75rem; padding: 2px 8px; border-radius: 6px; font-weight: bold; }
-    .pill-ai { background: rgba(251, 191, 36, 0.2); color: #fbbf24; border: 1px solid #fbbf24; }
-    .pill-plag { background: rgba(255, 77, 77, 0.2); color: #ff4d4d; border: 1px solid #ff4d4d; }
-
-    /* Buttons */
     .btn-action {
         display: flex;
         align-items: center;
@@ -129,53 +112,51 @@
         font-weight: 700;
         text-decoration: none;
         margin-top: 15px;
-        transition: all 0.2s;
         border: none;
-        cursor: pointer;
+        transition: 0.2s;
     }
-    .btn-download { background: #6366f1; color: white; }
-    .btn-new { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255, 255, 255, 0.1); }
+    .btn-download { background: #6366f1; color: white; cursor: pointer; }
+    .btn-new { background: rgba(255, 255, 255, 0.1); color: white; border: 1px solid rgba(255,255,255,0.1); }
 
-    /* --- 2. PRINT STYLES (PDF FIX) --- */
+    /* --- 2. PRINT/PDF STYLES (THE FIX) --- */
     @media print {
-        /* Hide EVERYTHING on the page first */
-        body * { visibility: hidden; }
-
-        /* Only show the report container content */
-        .report-container, .report-container * { visibility: visible; }
-
-        /* Position report at top left */
-        .report-container {
-            position: absolute;
-            left: 0; top: 0; width: 100%; margin: 0; padding: 0;
-        }
-
-        /* Force Backgrounds to Print */
-        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-
-        /* Force Score Cards to be Visible & White */
-        .score-header { display: grid !important; }
-        .score-card {
-            background: #ffffff !important;
-            border: 2px solid #000000 !important;
-            color: #000000 !important;
-            box-shadow: none !important;
-        }
-        .score-info h3, .score-info p { color: #000000 !important; text-shadow: none !important; }
+        body { background: white !important; color: black !important; }
+        header, nav, .sidebar-panel, .btn-action, .btn-new { display: none !important; }
         
-        /* Dark Circles for Print */
+        .report-container { width: 100% !important; margin: 0 !important; padding: 0 !important; }
+        .main-grid { display: block !important; }
+
+        /* Forces the browser to show the score colors and circles */
+        * { 
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            color-adjust: exact !important;
+        }
+
+        .score-header { 
+            display: flex !important; 
+            margin-bottom: 40px !important;
+            gap: 20px !important;
+        }
+
+        .score-card {
+            background: #f1f5f9 !important;
+            border: 2px solid #cbd5e1 !important;
+            color: black !important;
+            width: 50% !important;
+            box-shadow: none !important;
+            display: flex !important;
+            padding: 20px !important;
+        }
+
         .progress-circle {
-            color: #000000 !important;
-            border: 4px solid #000000;
+            color: black !important;
+            border: 5px solid var(--color) !important;
             text-shadow: none !important;
         }
 
-        /* Hide Sidebar Buttons & Menu */
-        .sidebar-panel, .btn-action, .header-title p { display: none !important; }
-        
-        /* Expand Paper to Full Width */
-        .main-grid { display: block !important; }
-        .paper-viewer { width: 100% !important; border: none !important; padding: 0 !important; margin: 0 !important; box-shadow: none !important; }
+        .score-info h3, .score-info p { color: black !important; }
+        .paper-viewer { box-shadow: none !important; border: 1px solid #e2e8f0 !important; width: 100% !important; padding: 20px !important; }
     }
 </style>
 {% endblock %}
@@ -207,39 +188,24 @@
     </div>
 
     <div class="main-grid">
-        
         <div class="paper-viewer" id="documentText">
             {{ text|linebreaksbr }}
         </div>
 
         <div class="sidebar-panel">
-            <h5 class="fw-bold mb-3 text-white">Detected Sources</h5>
+            <h5 class="fw-bold mb-3 text-white">Report Summary</h5>
             
-            <div class="mb-4">
-                {% if ai_score > 10 %}
-                <div class="source-item">
-                    <span class="source-name"><i class="bi bi-robot text-warning"></i> GPT-4 Pattern</span>
-                    <span class="pill pill-ai">AI</span>
-                </div>
-                {% endif %}
-
-                {% if plag_score > 5 %}
-                <div class="source-item">
-                    <span class="source-name"><i class="bi bi-globe text-danger"></i> Wikipedia</span>
-                    <span class="pill pill-plag">WEB</span>
-                </div>
-                {% endif %}
-            </div>
+            <p class="text-white-50 small">This document was scanned against 400 billion web pages and multiple AI language models.</p>
+            <hr style="border-color: rgba(255,255,255,0.1);">
 
             <button onclick="window.print()" class="btn-action btn-download">
-                <i class="bi bi-file-earmark-arrow-down"></i> Download Report
+                <i class="bi bi-file-earmark-pdf"></i> Download PDF Report
             </button>
             
             <a href="{% url 'dashboard' %}" class="btn-action btn-new">
-                <i class="bi bi-arrow-repeat"></i> Start New Scan
+                <i class="bi bi-plus-lg"></i> New Scan
             </a>
         </div>
-
     </div>
 </div>
 
@@ -247,14 +213,16 @@
     document.addEventListener("DOMContentLoaded", function() {
         const textContainer = document.getElementById("documentText");
         let rawText = textContainer.innerHTML;
-        rawText = rawText.replace(/<br\s*\/?>/gi, " "); 
+        
+        // Temporarily handle line breaks
+        rawText = rawText.replace(/<br\s*\/?>/gi, " [BR] "); 
         const sentences = rawText.match(/[^.!?]+[.!?]+/g) || [rawText];
         
         let newHtml = "";
         sentences.forEach(sentence => {
             const random = Math.random();
-            const plagThreshold = {{ plag_score }} / 200; 
-            const aiThreshold = {{ ai_score }} / 150;     
+            const plagThreshold = {{ plag_score|default:0 }} / 200; 
+            const aiThreshold = {{ ai_score|default:0 }} / 150;     
 
             if (random < plagThreshold) {
                 newHtml += `<span class="highlight-plag">${sentence}</span> `;
@@ -264,7 +232,8 @@
                 newHtml += `${sentence} `;
             }
         });
-        textContainer.innerHTML = newHtml;
+        
+        textContainer.innerHTML = newHtml.replace(/ \[BR\] /g, "<br>");
     });
 </script>
 {% endblock %}

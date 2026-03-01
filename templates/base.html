@@ -203,6 +203,10 @@
             <a href="{% url 'humanizer' %}" id="nav-human" class="nav-link {% if request.resolver_match.url_name == 'humanizer' %}active{% endif %}">
                 <i class="bi bi-magic"></i> Humanizer
             </a>
+
+            <a href="{% url 'writing_assistant' %}" id="nav-writer" class="nav-link {% if request.resolver_match.url_name == 'writing_assistant' %}active{% endif %}">
+                <i class="bi bi-pencil-square"></i> Writing Assistant
+            </a>
         </nav>
 
         <div class="user-profile">
@@ -240,7 +244,6 @@
         const icon = toggleBtn.querySelector('i');
         const html = document.documentElement;
 
-        // Check LocalStorage
         const savedTheme = localStorage.getItem('theme') || 'light';
         html.setAttribute('data-theme', savedTheme);
         updateIcon(savedTheme);
@@ -267,7 +270,6 @@
         // --- 2. WALKTHROUGH LOGIC (WalkMe Style) ---
         {% if user.is_authenticated %}
         document.addEventListener('DOMContentLoaded', () => {
-            // Check if this is the FIRST time the user has logged in
             const hasSeenTour = localStorage.getItem('hasSeenTour_v1');
 
             if (!hasSeenTour) {
@@ -279,6 +281,7 @@
                         { element: '#nav-plag', popover: { title: 'Plagiarism Scanner', description: 'Upload PDFs here. We scan for both copied text AND AI-generated content.' } },
                         { element: '#nav-ai', popover: { title: 'Quick AI Check', description: 'Just want to check a paragraph? Paste it here for instant AI detection.' } },
                         { element: '#nav-human', popover: { title: 'Humanizer Tool', description: 'Caught using AI? Use this tool to rewrite your text naturally.' } },
+                        { element: '#nav-writer', popover: { title: 'Writing Assistant (Coming Soon)', description: 'Soon we will highlight grammar errors and generate PDF heatmaps directly!' } },
                         { element: '#themeToggle', popover: { title: 'Dark Mode', description: 'Toggle between light and dark mode here.' } }
                     ],
                     onDestroyStarted: () => {
@@ -287,7 +290,6 @@
                     }
                 });
                 
-                // Delay slightly for dramatic effect
                 setTimeout(() => {
                     driverObj.drive();
                 }, 1000);
