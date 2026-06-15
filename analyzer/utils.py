@@ -1,92 +1,205 @@
+import os
 import requests
 import PyPDF2
 import docx
-import random
-from groq import Groq
+import uuid
+from dotenv import load_dotenv
 
-# ================= CONFIGURATION =================
-# These keys are now properly formatted for your demo
-GROQ_API_KEY = "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"
-SAPLING_API_KEY = "R5S3V1Z6Y93P0W32UHMZ0AEEM02Y11FQ"
-WINSTON_API_KEY = "pT5STKHtj5PfT6n8DgGQT8f1CTpj63MhvMq4jyUtb73079d2"
-# =================================================
+current_dir = os.path.dirname(os.path.abspath(__file__))
+env_path    = os.path.join(current_dir, '.env')
+load_dotenv(env_path)
 
+# ─── Environment Variables ────────────────────────────────────────────────────
+RAPIDAPI_KEY = os.getenv("RAPIDAPI_KEY")
+NGROK_URL = os.getenv("NGROK_URL", "https://colony-march-imitation.ngrok-free.dev")
+
+print("\n--- ENVIRONMENT INITIALIZATION ---")
+print(f"RapidAPI Key Loaded : {'YES' if RAPIDAPI_KEY else 'NO (Check .env file)'}")
+print(f"Ngrok URL           : {NGROK_URL}")
+print("----------------------------------\n")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# FILE EXTRACTION
+# ──────────────────────────────────────────────────────────────────────────────
 def extract_text_from_file(uploaded_file):
-    """Extracts text from PDF, DOCX, or TXT files."""
     text = ""
     try:
         filename = uploaded_file.name.lower()
-        if filename.endswith('.pdf'):
+        if filename.endswith(".pdf"):
             reader = PyPDF2.PdfReader(uploaded_file)
-            for page in reader.pages[:10]:
+            for page in reader.pages:
                 content = page.extract_text()
-                if content: text += content + "\n"
-        elif filename.endswith('.docx'):
+                if content:
+                    text += content + "\n"
+        elif filename.endswith(".docx"):
             doc = docx.Document(uploaded_file)
             for paragraph in doc.paragraphs:
                 text += paragraph.text + "\n"
-        elif filename.endswith('.txt'):
-            text = uploaded_file.read().decode('utf-8')
+        elif filename.endswith(".txt"):
+            text = uploaded_file.read().decode("utf-8")
+        else:
+            return "Error: Unsupported file type"
     except Exception as e:
         return f"Error: {str(e)}"
     return text.strip()
 
-def get_ai_score(text):
-    """Real AI detection via Sapling API."""
-    if not text or len(text) < 50: return 0
-    try:
-        url = "https://api.sapling.ai/api/v1/aidetect"
-        payload = {"key": SAPLING_API_KEY, "text": text[:5000]}
-        response = requests.post(url, json=payload)
-        if response.status_code == 200:
-            return int(response.json().get('score', 0) * 100)
-    except:
-        pass
-    # Fallback for demo stability
-    return random.randint(10, 20)
 
-def get_plag_score(text):
-    """Real Plagiarism detection via Winston AI."""
-    if not text or len(text) < 100: return 0
+# ──────────────────────────────────────────────────────────────────────────────
+# RAPIDAPI — HUMANIZER
+# ──────────────────────────────────────────────────────────────────────────────
+def humanize_text_rapidapi(text_to_scan):
+    url = "https://ai-humanizer-api.p.rapidapi.com/"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "x-rapidapi-host": "ai-humanizer-api.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY
+    }
+    
+    payload = {
+        "text": text_to_scan,
+        "level": "standard"
+    }
+    
     try:
-        url = "https://api.gowinston.ai/v2/plagiarism"
-        headers = {"Authorization": f"Bearer {WINSTON_API_KEY}", "Content-Type": "application/json"}
-        payload = {"text": text, "language": "auto"}
+        print("\n[HUMANIZE] Routing text to RapidAPI Humanizer...")
         response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("result", {}).get("score", 0)
-    except:
-        pass
-    # Fallback for demo stability
-    return random.randint(5, 15)
-
-def get_hybrid_report(text):
-    """Combines Plagiarism and AI results for the Dashboard."""
-    return {"plag_score": get_plag_score(text), "ai_score": get_ai_score(text)}
-
-def humanize_text_gemini(text):
-    """
-    Powerful Humanizer using Llama 3.3 via Groq.
-    Uses high temperature for natural sentence variety.
-    """
-    if not text: return ""
-    try:
-        # Syntax fixed: API key is now properly quoted
-        client = Groq(api_key=GROQ_API_KEY)
         
-        completion = client.chat.completions.create(
-            # UPDATED: Using the active llama-3.3 model to avoid 400 errors
-            model="llama-3.3-70b-versatile",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "You are a human editor. Rewrite the text to be 100% human-sounding with varied sentence structures. Maintain original meaning. Output ONLY the rewritten text."
-                },
-                {"role": "user", "content": text}
-            ],
-            temperature=0.9,
-            max_tokens=2048
-        )
-        return completion.choices[0].message.content
+        limit = response.headers.get("x-ratelimit-requests-limit", "Unknown")
+        remaining = response.headers.get("x-ratelimit-requests-remaining", "Unknown")
+        print(f"[API WALLET] Humanizer Quota: {limit} | Left: {remaining}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            humanized = data.get("humanized_text", data.get("text", text_to_scan))
+            print("[HUMANIZE] Success! Text converted to human style.")
+            return humanized
+        else:
+            print(f"[!] Humanizer API Error {response.status_code}: {response.text}")
+            return text_to_scan
     except Exception as e:
-        return f"Humanizer Error: {str(e)}. Please check your Groq setup."
+        print(f"[!] Humanizer Connection Failed: {e}")
+        return text_to_scan
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RAPIDAPI — AI DETECTION (ZeroGPT2)
+# ──────────────────────────────────────────────────────────────────────────────
+def get_rapidapi_ai_score(text_to_scan):
+    url = "https://zerogpt2.p.rapidapi.com/Gptcheck"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "x-rapidapi-host": "zerogpt2.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY
+    }
+    
+    payload = {"text": text_to_scan}
+    
+    try:
+        print("\n[AI] Routing document to RapidAPI ZeroGPT Engine...")
+        response = requests.post(url, json=payload, headers=headers)
+        
+        limit = response.headers.get("x-ratelimit-requests-limit", "Unknown")
+        remaining = response.headers.get("x-ratelimit-requests-remaining", "Unknown")
+        print(f"[API WALLET] ZeroGPT Quota: {limit} | Left: {remaining}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            ai_score = data.get("isGpt", data.get("data", {}).get("is_gpt_generated", 0))
+            print(f"[AI] Success! AI Score: {ai_score}%")
+            return int(ai_score)
+        else:
+            print(f"[!] AI API Error {response.status_code}: {response.text}")
+            return 0
+    except Exception as e:
+        print(f"[!] AI Connection Failed: {e}")
+        return 0
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# RAPIDAPI — PLAGIARISM CHECKER (Smodin with scrapeSources & timeout fixes)
+# ──────────────────────────────────────────────────────────────────────────────
+def get_rapidapi_plagiarism_score(text_to_scan):
+    url = "https://plagiarism-checker-and-auto-citation-generator-multi-lingual.p.rapidapi.com/plagiarism"
+    
+    headers = {
+        "Content-Type": "application/json",
+        "x-rapidapi-host": "plagiarism-checker-and-auto-citation-generator-multi-lingual.p.rapidapi.com",
+        "x-rapidapi-key": RAPIDAPI_KEY
+    }
+    
+    payload = {
+        "text": text_to_scan,
+        "language": "en",
+        "includeCitations": False,
+        "scrapeSources": True  # MUST be true to check the internet
+    }
+    
+    try:
+        print("\n[PLAG] Routing document to RapidAPI Plagiarism Engine...")
+        # Added timeout=50 to prevent endless loading loops
+        response = requests.post(url, json=payload, headers=headers, timeout=50)
+        
+        limit = response.headers.get("x-ratelimit-requests-limit", "Unknown")
+        remaining = response.headers.get("x-ratelimit-requests-remaining", "Unknown")
+        print(f"[API WALLET] Plagiarism Quota: {limit} | Left: {remaining}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            plag_score = int(data.get("percentPlagiarism", 0))
+            raw_sources = data.get("sources", [])
+            sources_list = []
+            
+            for src in raw_sources:
+                sources_list.append({
+                    "title": src.get("title", "Internet Database Match"),
+                    "url": src.get("url", ""),
+                    "matchedWords": "Multiple"
+                })
+                
+            print(f"[PLAG] Success! Score: {plag_score}% | Found {len(sources_list)} sources.")
+            return plag_score, sources_list
+        else:
+            print(f"[!] Plagiarism API Error {response.status_code}: {response.text}")
+            return 0, []
+            
+    except requests.exceptions.Timeout:
+        print("[!] Plagiarism API Error: Request Timed Out (Took too long to search the web).")
+        return 0, []
+    except Exception as e:
+        print(f"[!] Plagiarism Connection Failed: {e}")
+        return 0, []
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# MAIN HYBRID REPORT
+# ──────────────────────────────────────────────────────────────────────────────
+def get_hybrid_report(text):
+    if not text or len(text) < 50:
+        print("[!] Text too short. Skipping.")
+        return {"plag_score": 0, "ai_score": 0, "scan_id": None, "matched_sources": []}
+
+    scan_id = str(uuid.uuid4())
+    print(f"\n{'='*55}")
+    print(f"  HYBRID SCAN STARTED: {scan_id}")
+    print(f"{'='*55}")
+
+    ai_score = get_rapidapi_ai_score(text)
+    plag_score, matched_sources = get_rapidapi_plagiarism_score(text)
+
+    print(f"\n{'='*55}")
+    print(f"  COMPLETE → AI: {ai_score}% | Plag: {plag_score}% | Sources: {len(matched_sources)}")
+    print(f"{'='*55}\n")
+
+    analysis_results = [{"type": "normal", "text": text}]
+
+    return {
+        "plag_score":      plag_score,
+        "ai_score":        ai_score,
+        "scan_id":         scan_id,
+        "matched_sources": matched_sources,
+        "analysis_results": analysis_results
+    }

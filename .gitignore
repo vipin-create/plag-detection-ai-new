@@ -1,0 +1,17 @@
+# Virtual Environments
+env/
+venv/
+ENV/
+
+# Secret Keys
+.env
+analyzer/.env
+**/.env
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Local Database
+db.sqlite3

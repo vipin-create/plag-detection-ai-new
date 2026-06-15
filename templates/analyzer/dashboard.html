@@ -4,225 +4,219 @@
 
 {% block extra_css %}
 <style>
-    /* 1. DARK GLOWING THEME */
+    /* =========================================================
+       DYNAMIC THEME VARIABLES (ADAPTS TO DARK & LIGHT MODE)
+       ========================================================= */
+    :root {
+        --ic-bg-glass: rgba(30, 41, 59, 0.7);
+        --ic-bg-panel: rgba(30, 41, 59, 0.4);
+        --ic-bg-sidebar: rgba(15, 23, 42, 0.6);
+        --ic-bg-overlay: rgba(15, 23, 42, 0.95);
+        --ic-text-main: #f8fafc;
+        --ic-text-muted: #94a3b8;
+        --ic-border: rgba(255, 255, 255, 0.1);
+        --ic-menu: #1e293b;
+        --ic-btn-bg: rgba(255, 255, 255, 0.05);
+        --ic-hover: rgba(255, 255, 255, 0.1);
+        
+        /* Cyberpunk HUD Colors */
+        --neon-cyan: #00f3ff;
+        --neon-magenta: #ff00ff;
+        --hud-dark: #050a15;
+    }
+
+    [data-bs-theme="light"], [data-theme="light"], .light-mode, body.bg-light, body.bg-white {
+        --ic-bg-glass: rgba(255, 255, 255, 0.85);
+        --ic-bg-panel: rgba(255, 255, 255, 0.95);
+        --ic-bg-sidebar: rgba(248, 250, 252, 0.95);
+        --ic-bg-overlay: rgba(255, 255, 255, 0.95);
+        --ic-text-main: #0f172a;
+        --ic-text-muted: #64748b;
+        --ic-border: rgba(0, 0, 0, 0.1);
+        --ic-menu: #ffffff;
+        --ic-btn-bg: rgba(0, 0, 0, 0.04);
+        --ic-hover: rgba(0, 0, 0, 0.08);
+    }
+
+    .adaptive-text { color: var(--ic-text-main) !important; transition: color 0.3s; }
+    .adaptive-text-muted { color: var(--ic-text-muted) !important; transition: color 0.3s; }
+    .adaptive-border { border-color: var(--ic-border) !important; transition: border-color 0.3s; }
+
+    /* CORE DASHBOARD STYLES */
     .dashboard-container {
-        display: flex;
-        flex-direction: column;
-        min-height: calc(100vh - 100px);
-        max-width: 900px;
-        margin: 0 auto;
-        justify-content: center;
-        padding-bottom: 80px;
-        position: relative;
+        display: flex; flex-direction: column; min-height: calc(100vh - 100px);
+        max-width: 1200px; margin: 0 auto; justify-content: center; padding: 0 20px 80px 20px; position: relative;
     }
 
     .brand-icon {
-        font-size: 5rem;
-        background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        margin-bottom: 20px;
-        display: inline-block;
-        filter: drop-shadow(0 0 30px rgba(79, 70, 229, 0.3));
+        font-size: 5rem; background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;
+        display: inline-block; filter: drop-shadow(0 0 30px rgba(79, 70, 229, 0.3));
     }
 
-    /* 2. CHAT BAR (Premium Glass) */
-    .input-wrapper {
-        background: rgba(30, 41, 59, 0.7);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 26px;
-        padding: 14px 20px;
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-        position: relative;
-        z-index: 50; /* Ensure bar is above other elements */
-    }
+    .workspace-layout { display: flex; gap: 24px; margin-top: 30px; align-items: flex-start; width: 100%; }
+    .document-analysis-panel { flex: 2; background: var(--ic-bg-panel); border: 1px solid var(--ic-border); border-radius: 20px; padding: 25px; color: var(--ic-text-main); min-height: 300px; transition: all 0.3s; }
+    .reference-sidebar { flex: 1; background: var(--ic-bg-sidebar); border: 1px solid var(--ic-border); border-radius: 20px; padding: 25px; color: var(--ic-text-main); position: sticky; top: 20px; max-height: 600px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s; }
 
-    .input-wrapper:focus-within {
-        border-color: #6366f1;
-        box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);
-        transform: translateY(-2px);
-    }
+    .text-fragment { padding: 2px 0; transition: all 0.2s ease; }
+    .fragment-plagiarized { background: rgba(239, 68, 68, 0.25); border-bottom: 2px dashed #ef4444; cursor: pointer; }
+    .fragment-plagiarized:hover, .fragment-plagiarized.active-highlight { background: rgba(239, 68, 68, 0.45); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
 
-    .input-row {
-        display: flex;
-        align-items: flex-end;
-        gap: 15px;
-        width: 100%;
-        position: relative;
-    }
+    .metrics-summary-row { display: flex; gap: 15px; margin-bottom: 20px; }
+    .metric-pill-card { flex: 1; padding: 15px; border-radius: 12px; text-align: center; font-weight: bold; }
+    .card-plag-metric { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
+    .card-ai-metric { background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); color: #d97706; }
 
-    /* 3. THE POPUP MENU (Fixed Z-Index) */
-    .attach-menu {
-        position: absolute;
-        bottom: 70px; /* Moved slightly up */
-        left: 0;
-        background: #1e293b;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 16px;
-        padding: 8px;
-        min-width: 160px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
-        display: none;
-        flex-direction: column;
-        z-index: 1000; /* Super high so it floats on top */
-        animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
+    .sidebar-source-card { padding: 12px; background: var(--ic-btn-bg); border-left: 4px solid #ef4444; border-radius: 6px; margin-bottom: 12px; transition: all 0.2s ease; }
+    .sidebar-source-card:hover, .sidebar-source-card.active-card { background: var(--ic-hover); border-left-color: #6366f1; }
 
+    .btn-mic { width: 42px; height: 42px; border-radius: 50%; background: var(--ic-btn-bg); border: 1px solid var(--ic-border); color: var(--ic-text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
+    .btn-mic.recording { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; animation: pulseMic 1.5s infinite ease-in-out; }
+    @keyframes pulseMic { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+
+    .input-wrapper { background: var(--ic-bg-glass); backdrop-filter: blur(12px); border: 1px solid var(--ic-border); border-radius: 26px; padding: 14px 20px; box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1); display: flex; flex-direction: column; gap: 12px; position: relative; z-index: 50; }
+    .input-wrapper:focus-within { border-color: #6366f1; box-shadow: 0 0 25px rgba(99, 102, 241, 0.25); transform: translateY(-2px); }
+    .input-row { display: flex; align-items: flex-end; gap: 15px; width: 100%; position: relative; }
+    .attach-menu { position: absolute; bottom: 70px; left: 0; background: var(--ic-menu); border: 1px solid var(--ic-border); border-radius: 16px; padding: 8px; min-width: 160px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); display: none; flex-direction: column; z-index: 1000; animation: popUp 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .attach-menu.show { display: flex; }
+    .menu-item { color: var(--ic-text-main); padding: 12px 16px; border-radius: 12px; cursor: pointer; display: flex; align-items: center; gap: 12px; transition: all 0.2s; font-size: 0.9rem; }
+    .menu-item:hover { background: var(--ic-hover); color: #6366f1; }
+    .btn-attach { width: 42px; height: 42px; border-radius: 50%; background: var(--ic-btn-bg); border: 1px solid var(--ic-border); color: var(--ic-text-muted); font-size: 1.6rem; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
+    .btn-attach:hover, .btn-attach.active { background: var(--ic-hover); color: var(--ic-text-main); transform: rotate(45deg); }
 
-    .menu-item {
-        color: #e2e8f0;
-        padding: 12px 16px;
-        border-radius: 12px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-    }
-
-    .menu-item:hover {
-        background: rgba(99, 102, 241, 0.15);
-        color: #818cf8;
-    }
-
-    /* 4. ATTACH BUTTON (+) */
-    .btn-attach {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #94a3b8;
-        font-size: 1.6rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        flex-shrink: 0;
-    }
-
-    .btn-attach:hover, .btn-attach.active {
-        background: rgba(255, 255, 255, 0.1);
-        color: #fff;
-        transform: rotate(45deg);
-    }
-
-    /* TEXT AREA */
-    .chat-input {
-        flex: 1;
-        background: transparent;
-        border: none;
-        padding: 10px 0;
-        font-size: 1.05rem;
-        line-height: 1.5;
-        color: #f8fafc;
-        resize: none;
-        max-height: 200px;
-        min-height: 24px;
-        font-family: inherit;
-    }
+    .text-input-container { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .chat-input { width: 100%; background: transparent; border: none; padding: 10px 0 0 0; font-size: 1.05rem; line-height: 1.5; color: var(--ic-text-main); resize: none; max-height: 200px; min-height: 24px; font-family: inherit; transition: color 0.3s; }
     .chat-input:focus { outline: none; }
-    .chat-input::placeholder { color: #64748b; }
+    .chat-input::placeholder { color: var(--ic-text-muted); }
+    .word-counter { font-size: 0.85rem; color: var(--ic-text-muted); text-align: right; transition: color 0.3s; }
+    .word-counter.limit-exceeded { color: #ef4444; font-weight: bold; }
+    .word-counter.document-attached { color: #818cf8; font-weight: bold; }
+    .word-counter.calculating { color: #fbbf24; font-style: italic; }
 
-    /* SEND BUTTON */
-    .btn-send {
-        width: 42px;
-        height: 42px;
-        border-radius: 12px;
-        border: none;
-        background: #6366f1;
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        transition: all 0.3s;
-        flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    }
-    .btn-send:hover {
-        background: #4f46e5;
-        transform: scale(1.1);
-        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-    }
+    .btn-send { width: 42px; height: 42px; border-radius: 12px; border: none; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+    .btn-send:hover:not(:disabled) { background: #4f46e5; transform: scale(1.1); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5); }
+    .btn-send:disabled { background: var(--ic-border); color: var(--ic-text-muted); cursor: not-allowed; box-shadow: none; }
 
-    /* FILE BADGE */
-    .file-badge {
-        display: none; 
-        background: rgba(99, 102, 241, 0.15);
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        color: #a5b4fc;
-        padding: 8px 16px;
-        border-radius: 12px;
-        font-size: 0.9rem;
-        font-weight: 500;
-        align-items: center;
-        gap: 10px;
-        width: fit-content;
-        animation: slideUp 0.3s ease;
-    }
+    .file-badge-container { display: flex; flex-direction: column; gap: 6px; }
+    .file-badge { display: none; background: rgba(99, 102, 241, 0.15); border: 1px solid rgba(99, 102, 241, 0.3); color: #6366f1; padding: 8px 16px; border-radius: 12px; font-size: 0.9rem; font-weight: 500; align-items: center; gap: 10px; width: fit-content; animation: slideUp 0.3s ease; }
+    .pdf-warning { display: none; color: #d97706; font-size: 0.85rem; font-weight: 500; margin-left: 5px; }
 
-    /* 5. HISTORY TABLE STYLES */
     .history-section { margin-top: 60px; animation: fadeIn 1s ease; }
-    
-    .history-card {
-        background: rgba(30, 41, 59, 0.4);
-        border-radius: 16px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-    }
-    .table-dark { --bs-table-bg: transparent; color: #cbd5e1; margin-bottom: 0; }
-    .table-dark th { 
-        border-bottom: 1px solid rgba(255,255,255,0.1); 
-        color: #94a3b8; 
-        font-weight: 600; 
-        padding: 15px 20px;
-        font-size: 0.85rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .table-dark td { 
-        border-bottom: 1px solid rgba(255,255,255,0.05); 
-        vertical-align: middle; 
-        padding: 15px 20px;
-    }
-    .table-dark tr:last-child td { border-bottom: none; }
-    
+    .history-card { background: var(--ic-bg-panel); border-radius: 16px; overflow: hidden; border: 1px solid var(--ic-border); transition: all 0.3s; }
+    .adaptive-table { --bs-table-bg: transparent; color: var(--ic-text-main); margin-bottom: 0; }
+    .adaptive-table th { border-bottom: 1px solid var(--ic-border); color: var(--ic-text-muted); font-weight: 600; padding: 15px 20px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; }
+    .adaptive-table td { border-bottom: 1px solid var(--ic-border); vertical-align: middle; padding: 15px 20px; }
     .score-badge-sm { padding: 4px 10px; border-radius: 6px; font-size: 0.8rem; font-weight: bold; }
-    .badge-ai { background: rgba(251, 191, 36, 0.15); color: #fbbf24; border: 1px solid rgba(251, 191, 36, 0.3); }
-    .badge-plag { background: rgba(255, 77, 77, 0.15); color: #ff4d4d; border: 1px solid rgba(255, 77, 77, 0.3); }
+    .badge-ai { background: rgba(251, 191, 36, 0.15); color: #d97706; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .badge-plag { background: rgba(255, 77, 77, 0.15); color: #ef4444; border: 1px solid rgba(255, 77, 77, 0.3); }
 
-    /* LOADING OVERLAY */
+    /* =========================================================
+       CINEMATIC IRON MAN / HACKER HUD LOADING SCREEN
+       ========================================================= */
     .scan-overlay {
-        position: fixed;
-        top: 0; left: 0; width: 100%; height: 100%;
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(10px);
-        z-index: 9999;
-        display: none;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: white;
-    }
-    .loader-circle {
-        width: 60px; height: 60px;
-        border: 4px solid rgba(255,255,255,0.1);
-        border-top-color: #6366f1;
-        border-radius: 50%;
-        animation: spin 1s infinite linear;
-        margin-bottom: 20px;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at center, #0a1128 0%, #010308 100%);
+        z-index: 9999; display: none; flex-direction: column;
+        align-items: center; justify-content: center;
+        overflow: hidden;
+        font-family: 'Courier New', Courier, monospace;
     }
 
-    @keyframes spin { 100% { transform: rotate(360deg); } }
+    /* Background Grid */
+    .hud-grid {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background-image: 
+            linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+        background-size: 30px 30px;
+        z-index: 1;
+    }
+
+    /* Central Arc Reactor Rings */
+    .hud-reactor {
+        position: relative; width: 300px; height: 300px;
+        display: flex; align-items: center; justify-content: center;
+        z-index: 10; margin-bottom: 30px;
+    }
+
+    .ring { position: absolute; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+
+    /* Outer Ring */
+    .ring-1 {
+        width: 280px; height: 280px;
+        border: 2px solid rgba(0, 243, 255, 0.2);
+        border-top: 2px solid var(--neon-cyan);
+        border-bottom: 2px solid var(--neon-cyan);
+        box-shadow: 0 0 20px rgba(0, 243, 255, 0.4), inset 0 0 20px rgba(0, 243, 255, 0.2);
+        animation: hudSpin 4s linear infinite;
+    }
+
+    /* Middle Dashed Ring */
+    .ring-2 {
+        width: 240px; height: 240px;
+        border: 4px dashed rgba(255, 0, 255, 0.5);
+        box-shadow: 0 0 15px rgba(255, 0, 255, 0.3);
+        animation: hudSpinReverse 6s linear infinite;
+    }
+
+    /* Inner Core Ring */
+    .ring-3 {
+        width: 200px; height: 200px;
+        border: 3px dotted var(--neon-cyan);
+        animation: hudSpin 10s linear infinite;
+    }
+
+    /* Center Percentage */
+    .hud-percentage {
+        position: relative; z-index: 20;
+        font-size: 4.5rem; font-weight: 900; color: #ffffff;
+        text-shadow: 0 0 10px var(--neon-cyan), 0 0 20px var(--neon-cyan), 0 0 40px var(--neon-cyan);
+        font-variant-numeric: tabular-nums;
+        font-family: 'Arial', sans-serif;
+    }
+
+    /* Floating Hacker Side Panel */
+    .hud-terminal {
+        position: absolute; top: 20%; right: 5%;
+        width: 280px; height: 300px;
+        background: rgba(0, 20, 40, 0.5);
+        border: 1px solid rgba(0, 243, 255, 0.3);
+        border-radius: 4px; padding: 15px;
+        color: var(--neon-cyan); font-size: 0.8rem;
+        overflow: hidden; text-align: left; z-index: 5;
+        box-shadow: inset 0 0 15px rgba(0, 243, 255, 0.1);
+    }
+
+    .hud-terminal-header {
+        border-bottom: 1px solid var(--neon-cyan); padding-bottom: 5px; margin-bottom: 10px; font-weight: bold; letter-spacing: 2px;
+    }
+
+    .terminal-line { margin-bottom: 4px; opacity: 0; animation: typeIn 0.2s forwards; }
+
+    /* Scan Title and Status Text */
+    .hud-title {
+        z-index: 10; color: #ffffff; font-size: 1.8rem; letter-spacing: 8px; font-weight: bold;
+        text-shadow: 0 0 10px var(--neon-magenta);
+        text-transform: uppercase; margin-bottom: 10px;
+    }
+
+    .hud-status {
+        z-index: 10; color: var(--neon-cyan); font-size: 1.1rem; letter-spacing: 2px;
+        animation: textPulse 1s infinite;
+    }
+
+    /* Scanning Laser Line */
+    .laser-scan {
+        position: absolute; top: -10%; left: 0; width: 100%; height: 2px;
+        background: var(--neon-cyan); box-shadow: 0 0 20px 5px var(--neon-cyan);
+        z-index: 2; animation: laserSweep 3s ease-in-out infinite; opacity: 0.5;
+    }
+
+    @keyframes hudSpin { 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+    @keyframes hudSpinReverse { 100% { transform: translate(-50%, -50%) rotate(-360deg); } }
+    @keyframes textPulse { 0% { opacity: 0.5; } 50% { opacity: 1; text-shadow: 0 0 10px var(--neon-cyan); } 100% { opacity: 0.5; } }
+    @keyframes laserSweep { 0% { top: -10%; } 50% { top: 110%; } 100% { top: -10%; } }
+    @keyframes typeIn { to { opacity: 1; } }
     @keyframes popUp { from { opacity: 0; transform: translateY(10px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
     @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -231,18 +225,39 @@
 
 {% block content %}
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
+
+<!-- THE IRON MAN / HACKER HUD OVERLAY -->
 <div class="scan-overlay" id="loader">
-    <div class="loader-circle"></div>
-    <h3 class="fw-bold">Scanning Document...</h3>
-    <p class="text-white-50" id="scan-status">Initializing AI analysis</p>
+    <div class="hud-grid"></div>
+    <div class="laser-scan"></div>
+    
+    <!-- Floating Terminal for Fake Data Stream -->
+    <div class="hud-terminal" id="hudTerminal">
+        <div class="hud-terminal-header">SYS.LOG // DEEP_SCAN_MATRIX</div>
+        <div id="terminal-content"></div>
+    </div>
+
+    <!-- Center Arc Reactor -->
+    <div class="hud-reactor">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+        <div class="hud-percentage" id="progress-number">0%</div>
+    </div>
+    
+    <div class="hud-title" id="loader-title">NEURAL UPLINK ACTIVE</div>
+    <div class="hud-status" id="scan-status">Awaiting API Handshake...</div>
 </div>
 
 <div class="dashboard-container">
     
     <div class="text-center mb-5 mt-5">
         <i class="bi bi-shield-check brand-icon"></i>
-        <h2 class="fw-bold mb-2 text-white">IntellectCheck AI</h2>
-        <p class="text-white-50">Upload a document or paste text to detect plagiarism & AI content.</p>
+        <h2 class="fw-bold mb-2 adaptive-text">IntellectCheck AI</h2>
+        <p class="adaptive-text-muted">Upload a document or paste text to detect plagiarism & AI content.</p>
     </div>
 
     <form method="POST" action="{% url 'dashboard' %}" enctype="multipart/form-data" id="scanForm">
@@ -250,10 +265,13 @@
         
         <div class="input-wrapper">
             
-            <div class="file-badge" id="filePreview">
-                <i class="bi bi-file-earmark-pdf-fill"></i>
-                <span id="fileName">document.pdf</span>
-                <i class="bi bi-x-lg" style="cursor:pointer; margin-left:8px; opacity:0.7;" onclick="removeFile()"></i>
+            <div class="file-badge-container">
+                <div class="file-badge" id="filePreview">
+                    <i class="bi bi-file-earmark-pdf-fill"></i>
+                    <span id="fileName">document.pdf</span>
+                    <i class="bi bi-x-lg" style="cursor:pointer; margin-left:8px; opacity:0.7;" onclick="removeFile()"></i>
+                </div>
+                <div class="pdf-warning" id="pdfWarningMsg"></div>
             </div>
 
             <div class="input-row">
@@ -271,29 +289,167 @@
 
                 <input type="file" id="fileInput" name="document" accept=".pdf,.docx,.txt" style="display: none;" onchange="handleFileSelect(this)">
 
-                <textarea 
-                    name="text_input" 
-                    class="chat-input" 
-                    placeholder="Paste text or upload a file..." 
-                    oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
-                ></textarea>
+                <div class="btn-mic" id="micBtn" onclick="toggleVoiceRecognition()" title="Dictate Text (Voice to Text)">
+                    <i class="bi bi-mic-fill"></i>
+                </div>
 
-                <button type="submit" class="btn-send" title="Start Scan">
+                <div class="text-input-container">
+                    <textarea 
+                        name="text_input" 
+                        id="text_input"
+                        class="chat-input" 
+                        placeholder="Paste text or upload a file..." 
+                    ></textarea>
+                    <div class="word-counter" id="wordCountDisplay">0 / 1000 words</div>
+                </div>
+
+                <button type="submit" class="btn-send" id="scanSubmitBtn" title="Start Scan">
                     <i class="bi bi-arrow-up-short" style="font-size: 1.5rem;"></i>
                 </button>
             </div>
         </div>
     </form>
 
+    {% if report_data %}
+    <div class="workspace-layout">
+        
+        <div class="document-analysis-panel">
+            
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold adaptive-text mb-0"><i class="bi bi-file-earmark-text me-2"></i>Document Analysis Output</h5>
+                <button onclick="generatePDFReport()" class="btn btn-sm" style="background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%); color: white; border-radius: 8px; font-weight: bold; padding: 6px 14px;">
+                    <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF
+                </button>
+            </div>
+            
+            <div class="metrics-summary-row">
+                <div class="metric-pill-card card-plag-metric">
+                    <small class="d-block text-white-50 uppercase" style="color: inherit !important; opacity: 0.8;">Plagiarism Score</small>
+                    <span class="fs-4">{{ report_data.plag_score }}%</span>
+                </div>
+                <div class="metric-pill-card card-ai-metric">
+                    <small class="d-block text-white-50 uppercase" style="color: inherit !important; opacity: 0.8;">AI Probability</small>
+                    <span class="fs-4">{{ report_data.ai_score }}%</span>
+                </div>
+            </div>
+
+            <hr class="adaptive-border">
+            
+            <p class="lh-lg" style="font-size: 1.05rem;">
+                {% if report_data.analysis_results %}
+                    {% for item in report_data.analysis_results %}
+                        {% if item.type == 'plagiarized' %}
+                            <span id="frag-{{ item.id }}" class="text-fragment fragment-plagiarized" onclick="focusSourceCard('card-src-{{ item.id }}', 'frag-{{ item.id }}')">
+                                {{ item.text }}
+                            </span>
+                        {% else %}
+                            <span class="text-fragment adaptive-text" style="opacity: 0.85;">{{ item.text }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="text-fragment adaptive-text" style="opacity: 0.85;">{{ text }}</span>
+                {% endif %}
+            </p>
+        </div>
+
+        <div class="reference-sidebar" id="referenceSidebar">
+            <h5 class="fw-bold adaptive-text mb-3"><i class="bi bi-link-45deg me-2"></i>Matched Sources</h5>
+            <div id="sidebarContent">
+                </div>
+        </div>
+    </div>
+
+    <div id="pdf-export-template" style="display: none;">
+        
+        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222; background: white; border: 15px double #4F46E5; min-height: 10.5in; box-sizing: border-box; position: relative;">
+            
+            <div style="text-align: center; border-bottom: 3px double #333; padding-bottom: 15px; margin-bottom: 25px;">
+                <h1 style="color: #111; font-size: 26px; text-transform: uppercase; margin: 0; letter-spacing: 1px; font-family: Georgia, serif;">IntellectCheck AI</h1>
+                <h3 style="color: #444; font-size: 15px; font-weight: 600; margin: 5px 0 0 0;">Evaluation & Plagiarism Analysis Report</h3>
+                <p style="color: #666; font-size: 12px; margin: 8px 0 0 0; font-style: italic;">Verified Academic Document Integrity System</p>
+            </div>
+
+            <div style="background: #f1f5f9; padding: 12px 15px; border-radius: 6px; margin-bottom: 25px; font-size: 12px; line-height: 1.5; color: #334155; display: flex; justify-content: space-between;">
+                <div>
+                    <strong>Analysis Timestamp:</strong> <span id="pdf-date"></span><br>
+                    <strong>Security Token:</strong> <span style="font-family: monospace;">IC-{{ report_data.plag_score }}{{ report_data.ai_score }}-SECURE</span>
+                </div>
+                <div style="text-align: right;">
+                    <strong>Document Status:</strong> Evaluated Integrity Scan<br>
+                    <strong>Classification Tier:</strong> Final Verification Review
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 20px; margin-bottom: 30px;">
+                <div style="flex: 1; background: #fff1f2; border: 2px solid #fecdd3; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #9f1239;">{{ report_data.plag_score }}%</div>
+                    <div style="color: #e11d48; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 3px;">Plagiarized Overlap</div>
+                </div>
+                <div style="flex: 1; background: #fffbeb; border: 2px solid #fef3c7; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #92400e;">{{ report_data.ai_score }}%</div>
+                    <div style="color: #d97706; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 3px;">AI Generated Weight</div>
+                </div>
+                <div style="flex: 1; background: #f0fdf4; border: 2px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center;">
+                    <div style="font-size: 24px; font-weight: bold; color: #166534;">{% widthratio 100 1 report_data.plag_score as invert_score %}{{ 100|add:"-report_data.plag_score" }}%</div>
+                    <div style="color: #16a34a; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 3px;">Unique Content</div>
+                </div>
+            </div>
+
+            <h4 style="color: #111; font-family: Georgia, serif; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 12px; font-size: 14px;">Analyzed Document Content:</h4>
+            <div style="font-size: 13px; line-height: 1.8; text-align: justify; color: #333; margin-bottom: 40px; font-family: Georgia, serif;">
+                {{ text }}
+            </div>
+
+        </div>
+
+        <div style="page-break-before: always; padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222; background: white; border: 15px double #4F46E5; min-height: 10.5in; box-sizing: border-box; position: relative;">
+            
+            <h3 style="color: #111; font-family: Georgia, serif; border-bottom: 2px solid #111; padding-bottom: 6px; font-size: 16px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 0.5px;">Matched Resources & Bibliography</h3>
+            
+            <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.6;">
+                <thead>
+                    <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left;">
+                        <th style="padding: 12px; width: 12%;">Index</th>
+                        <th style="padding: 12px; width: 68%;">Source Repository Database Link</th>
+                        <th style="padding: 12px; width: 20%; text-align: right;">Overlap weight</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for source in report_data.matched_sources %}
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 12px; font-weight: bold; color: #e11d48; vertical-align: top;">[Source {{ forloop.counter }}]</td>
+                            <td style="padding: 12px; word-break: break-all; vertical-align: top;">
+                                <div style="font-weight: 600; color: #1e293b; margin-bottom: 4px;">{{ source.title|default:"Internet Database Match Identified" }}</div>
+                                <a href="{{ source.url }}" style="color: #2563eb; text-decoration: none;">{{ source.url }}</a>
+                            </td>
+                            <td style="padding: 12px; text-align: right; font-weight: bold; color: #be123c; vertical-align: top;">{{ source.matchedWords }} words</td>
+                        </tr>
+                    {% empty %}
+                        <tr>
+                            <td colspan="3" style="text-align:center; padding: 20px; font-style: italic; color: #64748b;">No exact matches found.</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div style="position: absolute; bottom: 20px; left: 40px; right: 40px; display: flex; justify-content: space-between; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                <div>IntellectCheck Verification Core v3.0</div>
+                <div>End of Official Report</div>
+            </div>
+
+        </div>
+    </div>
+    {% endif %}
+
     {% if recent_scans %}
     <div class="history-section">
         <div class="d-flex justify-content-between align-items-center mb-3 px-2">
-            <h5 class="text-white fw-bold mb-0">Recent Activity</h5>
-            <small class="text-white-50">Last 5 Scans</small>
+            <h5 class="fw-bold adaptive-text mb-0">Recent Activity</h5>
+            <small class="adaptive-text-muted">Last 5 Scans</small>
         </div>
         
         <div class="history-card">
-            <table class="table table-dark w-100">
+            <table class="table adaptive-table w-100">
                 <thead>
                     <tr>
                         <th>Document</th>
@@ -307,13 +463,13 @@
                     <tr>
                         <td>
                             <div class="d-flex align-items-center gap-3">
-                                <div style="width: 35px; height: 35px; background: rgba(255,255,255,0.05); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                                <div style="width: 35px; height: 35px; background: var(--ic-btn-bg); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
                                     <i class="bi bi-file-earmark-text text-primary"></i>
                                 </div>
-                                <span class="text-white">{{ scan.filename|truncatechars:25 }}</span>
+                                <span class="adaptive-text">{{ scan.filename|truncatechars:25 }}</span>
                             </div>
                         </td>
-                        <td class="text-white-50">{{ scan.scan_date|date:"M d" }}</td>
+                        <td class="adaptive-text-muted">{{ scan.scan_date|date:"M d" }}</td>
                         <td class="text-center"><span class="score-badge-sm badge-ai">{{ scan.ai_score }}%</span></td>
                         <td class="text-center"><span class="score-badge-sm badge-plag">{{ scan.plag_score }}%</span></td>
                     </tr>
@@ -329,62 +485,225 @@
 <script>
     const menu = document.getElementById('attachMenu');
     const plusBtn = document.getElementById('plusBtn');
+    const micBtn = document.getElementById('micBtn');
+    const textInput = document.getElementById('text_input');
+    const wordCountDisplay = document.getElementById('wordCountDisplay');
+    const scanSubmitBtn = document.getElementById('scanSubmitBtn');
+    const pdfWarningMsg = document.getElementById('pdfWarningMsg');
 
-    // 1. Toggle Menu
-    function toggleMenu() {
-        menu.classList.toggle('show');
-        plusBtn.classList.toggle('active');
+    const MAX_WORDS = 1000;
+
+    function updateWordCount() {
+        const text = textInput.value.trim();
+        const words = text ? text.split(/\s+/) : [];
+        const wordCount = words.length;
+
+        wordCountDisplay.className = "word-counter"; 
+        wordCountDisplay.innerText = `Words: ${wordCount} / ${MAX_WORDS}`;
+        textInput.style.height = ''; textInput.style.height = textInput.scrollHeight + 'px';
+
+        if (wordCount > MAX_WORDS) {
+            wordCountDisplay.classList.add('limit-exceeded'); scanSubmitBtn.disabled = true;
+            scanSubmitBtn.setAttribute('title', 'Word limit exceeded. Please reduce text to scan.');
+        } else {
+            scanSubmitBtn.disabled = false; scanSubmitBtn.setAttribute('title', 'Start Scan');
+        }
     }
+    if (textInput) { textInput.addEventListener('input', updateWordCount); }
 
-    // 2. Trigger Upload (AND CLOSE MENU IMMEDIATELY)
-    function triggerFileUpload() {
-        document.getElementById('fileInput').click();
-        
-        // --- CRITICAL FIX: Hide menu immediately after click ---
-        menu.classList.remove('show');
-        plusBtn.classList.remove('active');
-    }
-
-    // 3. Handle File Selection
-    function handleFileSelect(input) {
-        // --- CRITICAL FIX: Ensure menu is closed when file is picked ---
-        menu.classList.remove('show');
-        plusBtn.classList.remove('active');
+    async function handleFileSelect(input) {
+        menu.classList.remove('show'); plusBtn.classList.remove('active');
 
         if (input.files && input.files[0]) {
             const file = input.files[0];
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('filePreview').style.display = 'inline-flex';
+            
+            textInput.disabled = true; textInput.placeholder = "Reading document...";
+            wordCountDisplay.className = "word-counter calculating"; wordCountDisplay.innerText = "Parsing document words...";
+            scanSubmitBtn.disabled = true; pdfWarningMsg.style.display = 'none';
+
+            try {
+                let extractedText = ""; const ext = file.name.split('.').pop().toLowerCase();
+
+                if (ext === 'txt') {
+                    extractedText = await file.text(); processDocumentWords(extractedText, file.name);
+                } else if (ext === 'docx') {
+                    const arrayBuffer = await file.arrayBuffer();
+                    const result = await mammoth.extractRawText({arrayBuffer: arrayBuffer});
+                    extractedText = result.value; processDocumentWords(extractedText, file.name);
+                } else if (ext === 'pdf') {
+                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+                    const arrayBuffer = await file.arrayBuffer();
+                    const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
+                    
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i); const content = await page.getTextContent();
+                        const strings = content.items.map(item => item.str); extractedText += strings.join(" ") + " ";
+                    }
+                    processDocumentWords(extractedText, file.name);
+                } else { wordCountDisplay.innerText = "Unsupported file type."; scanSubmitBtn.disabled = false; }
+            } catch (error) { console.error("Error:", error); wordCountDisplay.innerText = "[Attached] Word count unavailable."; scanSubmitBtn.disabled = false; }
         }
     }
 
-    // 4. Remove File
+    function processDocumentWords(text, filename) {
+        const words = text.trim() ? text.trim().split(/\s+/) : []; const wordCount = words.length;
+        wordCountDisplay.className = "word-counter document-attached"; wordCountDisplay.innerText = `Total Document Words: ${wordCount.toLocaleString()}`;
+        scanSubmitBtn.disabled = false; scanSubmitBtn.setAttribute('title', 'Start Scan'); textInput.placeholder = `Document attached: ${filename}`;
+
+        if (wordCount > MAX_WORDS) {
+            pdfWarningMsg.innerHTML = `<i class="bi bi-info-circle-fill"></i> System Notice: Contains <b>${wordCount.toLocaleString()} words</b>. Truncated to 1,000.`;
+            pdfWarningMsg.style.display = 'block'; wordCountDisplay.classList.add('limit-exceeded');
+        }
+    }
+
     function removeFile() {
-        document.getElementById('fileInput').value = '';
-        document.getElementById('filePreview').style.display = 'none';
+        document.getElementById('fileInput').value = ''; document.getElementById('filePreview').style.display = 'none';
+        pdfWarningMsg.style.display = 'none'; textInput.disabled = false; textInput.placeholder = "Paste text or upload a file..."; updateWordCount();
     }
 
-    // 5. Close menu if clicked outside
-    document.addEventListener('click', function(e) {
-        if (!plusBtn.contains(e.target) && !menu.contains(e.target)) {
-            menu.classList.remove('show');
-            plusBtn.classList.remove('active');
-        }
+    document.addEventListener("DOMContentLoaded", function() {
+        const sidebar = document.getElementById('sidebarContent');
+        if (!sidebar) return;
+        let sourcesHTML = ""; let totalMatches = 0;
+
+        {% if report_data and report_data.matched_sources %}
+            {% for source in report_data.matched_sources %}
+                totalMatches++;
+                sourcesHTML += `<div class="sidebar-source-card" id="card-src-${totalMatches}">
+                    <div class="d-flex justify-content-between align-items-start mb-1"><span class="badge bg-danger text-white" style="font-size:0.7rem;">Match ${totalMatches}</span><small style="color: #ef4444; font-weight: bold;">${"{{ source.matchedWords }}"} words</small></div>
+                    <p class="small adaptive-text-muted text-truncate mb-1" style="font-weight: bold;">${"{{ source.title|escapejs }}"}</p>
+                    <a href="${"{{ source.url }}"}" target="_blank" rel="noopener noreferrer" style="color: #818cf8; font-size: 0.85rem; word-break: break-all; text-decoration: underline;">${"{{ source.url }}"}</a></div>`;
+            {% endfor %}
+        {% endif %}
+        if (totalMatches > 0) { sidebar.innerHTML = sourcesHTML; } 
+        else { sidebar.innerHTML = `<p class="adaptive-text-muted small italic">100% unique repository targets found. Clean match signature matrix.</p>`; }
     });
 
-    // 6. Handle Submit
-    document.getElementById('scanForm').addEventListener('submit', function(e) {
-        const fileInput = document.getElementById('fileInput');
-        const textInput = document.querySelector('textarea[name="text_input"]');
-        
-        if (!fileInput.value && !textInput.value.trim()) {
-            e.preventDefault();
-            alert("Please provide text or a file.");
-            return;
-        }
+    function focusSourceCard(cardId, fragId) {
+        document.querySelectorAll('.sidebar-source-card').forEach(c => c.classList.remove('active-card')); document.querySelectorAll('.text-fragment').forEach(f => f.classList.remove('active-highlight'));
+        const card = document.getElementById(cardId); const frag = document.getElementById(fragId);
+        if(card) { card.classList.add('active-card'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        if(frag) frag.classList.add('active-highlight');
+    }
 
-        const loader = document.getElementById('loader');
-        loader.style.display = 'flex';
-    });
+    let recognition; let isRecording = false;
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition(); recognition.continuous = true; recognition.interimResults = false; recognition.lang = 'en-US';
+        recognition.onresult = function(event) {
+            let currentTranscript = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) { if (event.results[i].isFinal) currentTranscript += event.results[i][0].transcript + ' '; }
+            if (currentTranscript) { textInput.value += currentTranscript; updateWordCount(); }
+        };
+        recognition.onerror = function(event) { stopRecording(); }; recognition.onend = function() { stopRecording(); };
+    } else { if(micBtn) micBtn.style.display = 'none'; }
+
+    function toggleVoiceRecognition() {
+        if (!recognition) return;
+        if (isRecording) { recognition.stop(); stopRecording(); } 
+        else { recognition.start(); isRecording = true; micBtn.classList.add('recording'); micBtn.setAttribute('title', 'Recording... Click to stop dictating.'); }
+    }
+    function stopRecording() { isRecording = false; if(micBtn) { micBtn.classList.remove('recording'); micBtn.setAttribute('title', 'Dictate Text (Voice to Text)'); } }
+
+    function toggleMenu() { menu.classList.toggle('show'); plusBtn.classList.toggle('active'); }
+    function triggerFileUpload() { document.getElementById('fileInput').click(); menu.classList.remove('show'); plusBtn.classList.remove('active'); }
+    document.addEventListener('click', function(e) { if (plusBtn && menu && !plusBtn.contains(e.target) && !menu.contains(e.target)) { menu.classList.remove('show'); plusBtn.classList.remove('active'); } });
+
+
+    // =========================================================================
+    // THE CINEMATIC HUD ANIMATION CONTROLLER 
+    // =========================================================================
+    const form = document.getElementById('scanForm');
+    if(form) {
+        form.addEventListener('submit', function(e) {
+            const fileInput = document.getElementById('fileInput');
+            if (!fileInput.value && !textInput.value.trim()) { e.preventDefault(); alert("Please provide text or a file."); return; }
+            if (isRecording) { recognition.stop(); }
+
+            // Engage HUD
+            document.getElementById('loader').style.display = 'flex';
+            
+            const progressNumber = document.getElementById('progress-number');
+            const statusText = document.getElementById('scan-status');
+            const loaderTitle = document.getElementById('loader-title');
+            const terminalContent = document.getElementById('terminal-content');
+
+            // 1. Percentage Counter
+            let progress = 0;
+            const progressInterval = setInterval(() => {
+                progress += Math.floor(Math.random() * 3) + 1;
+                if (progress >= 99) { progress = 99; clearInterval(progressInterval); }
+                progressNumber.innerText = progress + "%";
+            }, 300);
+
+            // 2. High-Tech Processing Titles (For AI/ML relevance)
+            const titles = [
+                "NEURAL UPLINK ACTIVE",
+                "TOKENIZING TEXT VECTORS",
+                "SEMANTIC ANALYSIS ENGAGED",
+                "SCRAPING INTERNET REPOSITORIES",
+                "FINALIZING METRIC WEIGHTS"
+            ];
+            const descriptions = [
+                "Establishing secure connection to NLP models...",
+                "Running structural sentence perplexity values...",
+                "Mapping vector space against GPT architectures...",
+                "Cross-referencing live databases and cached indexes...",
+                "Compiling source overlap and generating heatmaps..."
+            ];
+            
+            let phaseIndex = 0;
+            setInterval(() => {
+                phaseIndex++;
+                if (phaseIndex < titles.length) {
+                    loaderTitle.innerText = titles[phaseIndex];
+                    statusText.innerText = descriptions[phaseIndex];
+                }
+            }, 3500);
+
+            // 3. The Hacker Terminal Data Stream Engine
+            const hackPhrases = [
+                "0x8F9B2 -> Hash Matched",
+                "Bypassing firewall cache...",
+                "Extracted 4209 tokens",
+                "Checking BERT embeddings",
+                "Source found: en.wikipedia.org",
+                "0x1A2F -> Null pointer exception caught",
+                "Compiling cosine similarity array",
+                "Injecting prompt variables...",
+                "T5 Model responded: 200 OK",
+                "Decrypting SSL layer...",
+                "[WARN] High burstiness detected"
+            ];
+
+            let terminalLines = [];
+            setInterval(() => {
+                // Generate a random hex code + random phrase
+                const hex = Math.floor(Math.random()*16777215).toString(16).toUpperCase();
+                const phrase = hackPhrases[Math.floor(Math.random() * hackPhrases.length)];
+                const newLine = `<div class="terminal-line">[${hex}] ${phrase}</div>`;
+                
+                terminalLines.push(newLine);
+                // Keep only the last 10 lines so it doesn't overflow
+                if(terminalLines.length > 10) terminalLines.shift();
+                
+                terminalContent.innerHTML = terminalLines.join('');
+            }, 450); // Generates a new line of code every half second!
+            
+            // Background Django submit continues normally.
+        });
+    }
+
+    function generatePDFReport() {
+        const element = document.getElementById('pdf-export-template');
+        const dateElement = document.getElementById('pdf-date');
+        if(dateElement) dateElement.innerText = new Date().toLocaleString();
+        element.style.display = 'block';
+
+        const opt = { margin: 0.3, filename: 'IntellectCheck_Academic_Report.pdf', image: { type: 'jpeg', quality: 0.99 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
+        html2pdf().set(opt).from(element).save().then(() => { element.style.display = 'none'; });
+    }
 </script>
 {% endblock %}
