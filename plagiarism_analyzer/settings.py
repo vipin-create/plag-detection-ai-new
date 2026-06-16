@@ -137,3 +137,10 @@ LOGOUT_REDIRECT_URL = '/'
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# ──────────────────────────────────────────────────────────────────────────────
+# SECURITY CONFIGURATION: Trust Ngrok Tunnels for Form Submissions (POST)
+# ──────────────────────────────────────────────────────────────────────────────
+CSRF_TRUSTED_ORIGINS = [
+    'https://colony-march-imitation.ngrok-free.dev',
+    'https://*.ngrok-free.dev',  # Wildcard allows any future dynamic Ngrok links too!
+]
