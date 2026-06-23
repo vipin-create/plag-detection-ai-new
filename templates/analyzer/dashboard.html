@@ -18,7 +18,7 @@
         --ic-menu: #1e293b;
         --ic-btn-bg: rgba(255, 255, 255, 0.05);
         --ic-hover: rgba(255, 255, 255, 0.1);
-        
+
         /* Cyberpunk HUD Colors */
         --neon-cyan: #00f3ff;
         --neon-magenta: #ff00ff;
@@ -52,23 +52,47 @@
         font-size: 5rem; background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%);
         -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px;
         display: inline-block; filter: drop-shadow(0 0 30px rgba(79, 70, 229, 0.3));
+        animation: shieldGlow 3s ease-in-out infinite;
+    }
+    @keyframes shieldGlow {
+        0%, 100% { filter: drop-shadow(0 0 20px rgba(79, 70, 229, 0.3)); }
+        50% { filter: drop-shadow(0 0 38px rgba(236, 72, 153, 0.45)); }
     }
 
     .workspace-layout { display: flex; gap: 24px; margin-top: 30px; align-items: flex-start; width: 100%; }
     .document-analysis-panel { flex: 2; background: var(--ic-bg-panel); border: 1px solid var(--ic-border); border-radius: 20px; padding: 25px; color: var(--ic-text-main); min-height: 300px; transition: all 0.3s; }
     .reference-sidebar { flex: 1; background: var(--ic-bg-sidebar); border: 1px solid var(--ic-border); border-radius: 20px; padding: 25px; color: var(--ic-text-main); position: sticky; top: 20px; max-height: 600px; overflow-y: auto; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1); transition: all 0.3s; }
 
-    .text-fragment { padding: 2px 0; transition: all 0.2s ease; }
-    .fragment-plagiarized { background: rgba(239, 68, 68, 0.25); border-bottom: 2px dashed #ef4444; cursor: pointer; }
-    .fragment-plagiarized:hover, .fragment-plagiarized.active-highlight { background: rgba(239, 68, 68, 0.45); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+    /* =========================================================
+       CLEANER TEXT HIGHLIGHTS — soft underline + tint, not a solid block
+       ========================================================= */
+    .text-fragment { padding: 1px 0; transition: all 0.2s ease; }
+    .fragment-plagiarized {
+        border-bottom: 2px solid rgba(239, 68, 68, 0.75);
+        background: linear-gradient(to bottom, transparent 78%, rgba(239, 68, 68, 0.16) 78%);
+        cursor: pointer;
+    }
+    .fragment-plagiarized:hover, .fragment-plagiarized.active-highlight {
+        background: linear-gradient(to bottom, transparent 70%, rgba(239, 68, 68, 0.28) 70%);
+    }
+    .fragment-ai {
+        border-bottom: 2px solid rgba(245, 158, 11, 0.75);
+        background: linear-gradient(to bottom, transparent 78%, rgba(245, 158, 11, 0.16) 78%);
+        cursor: help;
+    }
+    .fragment-ai:hover {
+        background: linear-gradient(to bottom, transparent 70%, rgba(245, 158, 11, 0.28) 70%);
+    }
 
     .metrics-summary-row { display: flex; gap: 15px; margin-bottom: 20px; }
-    .metric-pill-card { flex: 1; padding: 15px; border-radius: 12px; text-align: center; font-weight: bold; }
+    .metric-pill-card { flex: 1; padding: 15px; border-radius: 12px; text-align: center; font-weight: bold; transition: transform 0.3s; }
+    .metric-pill-card:hover { transform: translateY(-4px); }
     .card-plag-metric { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #ef4444; }
     .card-ai-metric { background: rgba(251, 191, 36, 0.15); border: 1px solid rgba(251, 191, 36, 0.3); color: #d97706; }
+    .card-unique-metric { background: rgba(22, 163, 74, 0.15); border: 1px solid rgba(22, 163, 74, 0.3); color: #16a34a; }
 
     .sidebar-source-card { padding: 12px; background: var(--ic-btn-bg); border-left: 4px solid #ef4444; border-radius: 6px; margin-bottom: 12px; transition: all 0.2s ease; }
-    .sidebar-source-card:hover, .sidebar-source-card.active-card { background: var(--ic-hover); border-left-color: #6366f1; }
+    .sidebar-source-card:hover, .sidebar-source-card.active-card { background: var(--ic-hover); border-left-color: #6366f1; transform: translateX(5px); }
 
     .btn-mic { width: 42px; height: 42px; border-radius: 50%; background: var(--ic-btn-bg); border: 1px solid var(--ic-border); color: var(--ic-text-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s ease; flex-shrink: 0; }
     .btn-mic.recording { background: rgba(239, 68, 68, 0.2); color: #ef4444; border-color: #ef4444; animation: pulseMic 1.5s infinite ease-in-out; }
@@ -93,7 +117,10 @@
     .word-counter.document-attached { color: #818cf8; font-weight: bold; }
     .word-counter.calculating { color: #fbbf24; font-style: italic; }
 
-    .btn-send { width: 42px; height: 42px; border-radius: 12px; border: none; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); }
+    /* SHINY BUTTON GLOW */
+    .btn-send { position: relative; overflow: hidden; width: 42px; height: 42px; border-radius: 12px; border: none; background: #6366f1; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; flex-shrink: 0; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3); z-index: 1; }
+    .btn-send::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent); transition: all 0.6s ease; z-index: -1; }
+    .btn-send:hover:not(:disabled)::before { left: 100%; }
     .btn-send:hover:not(:disabled) { background: #4f46e5; transform: scale(1.1); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5); }
     .btn-send:disabled { background: var(--ic-border); color: var(--ic-text-muted); cursor: not-allowed; box-shadow: none; }
 
@@ -122,17 +149,15 @@
         font-family: 'Courier New', Courier, monospace;
     }
 
-    /* Background Grid */
     .hud-grid {
         position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-        background-image: 
+        background-image:
             linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
             linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
         background-size: 30px 30px;
         z-index: 1;
     }
 
-    /* Central Arc Reactor Rings */
     .hud-reactor {
         position: relative; width: 300px; height: 300px;
         display: flex; align-items: center; justify-content: center;
@@ -141,7 +166,6 @@
 
     .ring { position: absolute; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); }
 
-    /* Outer Ring */
     .ring-1 {
         width: 280px; height: 280px;
         border: 2px solid rgba(0, 243, 255, 0.2);
@@ -151,7 +175,6 @@
         animation: hudSpin 4s linear infinite;
     }
 
-    /* Middle Dashed Ring */
     .ring-2 {
         width: 240px; height: 240px;
         border: 4px dashed rgba(255, 0, 255, 0.5);
@@ -159,14 +182,12 @@
         animation: hudSpinReverse 6s linear infinite;
     }
 
-    /* Inner Core Ring */
     .ring-3 {
         width: 200px; height: 200px;
         border: 3px dotted var(--neon-cyan);
         animation: hudSpin 10s linear infinite;
     }
 
-    /* Center Percentage */
     .hud-percentage {
         position: relative; z-index: 20;
         font-size: 4.5rem; font-weight: 900; color: #ffffff;
@@ -175,7 +196,6 @@
         font-family: 'Arial', sans-serif;
     }
 
-    /* Floating Hacker Side Panel */
     .hud-terminal {
         position: absolute; top: 20%; right: 5%;
         width: 280px; height: 300px;
@@ -193,7 +213,6 @@
 
     .terminal-line { margin-bottom: 4px; opacity: 0; animation: typeIn 0.2s forwards; }
 
-    /* Scan Title and Status Text */
     .hud-title {
         z-index: 10; color: #ffffff; font-size: 1.8rem; letter-spacing: 8px; font-weight: bold;
         text-shadow: 0 0 10px var(--neon-magenta);
@@ -205,7 +224,6 @@
         animation: textPulse 1s infinite;
     }
 
-    /* Scanning Laser Line */
     .laser-scan {
         position: absolute; top: -10%; left: 0; width: 100%; height: 2px;
         background: var(--neon-cyan); box-shadow: 0 0 20px 5px var(--neon-cyan);
@@ -229,31 +247,28 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.4.21/mammoth.browser.min.js"></script>
 
-<!-- THE IRON MAN / HACKER HUD OVERLAY -->
 <div class="scan-overlay" id="loader">
     <div class="hud-grid"></div>
     <div class="laser-scan"></div>
-    
-    <!-- Floating Terminal for Fake Data Stream -->
+
     <div class="hud-terminal" id="hudTerminal">
         <div class="hud-terminal-header">SYS.LOG // DEEP_SCAN_MATRIX</div>
         <div id="terminal-content"></div>
     </div>
 
-    <!-- Center Arc Reactor -->
     <div class="hud-reactor">
         <div class="ring ring-1"></div>
         <div class="ring ring-2"></div>
         <div class="ring ring-3"></div>
         <div class="hud-percentage" id="progress-number">0%</div>
     </div>
-    
-    <div class="hud-title" id="loader-title">NEURAL UPLINK ACTIVE</div>
-    <div class="hud-status" id="scan-status">Awaiting API Handshake...</div>
+
+    <div class="hud-title" id="loader-title">MULTI-MODEL ENGINE ACTIVE</div>
+    <div class="hud-status" id="scan-status">Awaiting core pipeline resolution...</div>
 </div>
 
 <div class="dashboard-container">
-    
+
     <div class="text-center mb-5 mt-5">
         <i class="bi bi-shield-check brand-icon"></i>
         <h2 class="fw-bold mb-2 adaptive-text">IntellectCheck AI</h2>
@@ -262,9 +277,9 @@
 
     <form method="POST" action="{% url 'dashboard' %}" enctype="multipart/form-data" id="scanForm">
         {% csrf_token %}
-        
+
         <div class="input-wrapper">
-            
+
             <div class="file-badge-container">
                 <div class="file-badge" id="filePreview">
                     <i class="bi bi-file-earmark-pdf-fill"></i>
@@ -275,7 +290,7 @@
             </div>
 
             <div class="input-row">
-                
+
                 <div class="attach-menu" id="attachMenu">
                     <div class="menu-item" onclick="triggerFileUpload()">
                         <i class="bi bi-file-earmark-plus text-primary"></i>
@@ -294,11 +309,11 @@
                 </div>
 
                 <div class="text-input-container">
-                    <textarea 
-                        name="text_input" 
+                    <textarea
+                        name="text_input"
                         id="text_input"
-                        class="chat-input" 
-                        placeholder="Paste text or upload a file..." 
+                        class="chat-input"
+                        placeholder="Paste text or upload a file..."
                     ></textarea>
                     <div class="word-counter" id="wordCountDisplay">0 / 1000 words</div>
                 </div>
@@ -312,16 +327,16 @@
 
     {% if report_data %}
     <div class="workspace-layout">
-        
+
         <div class="document-analysis-panel">
-            
+
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold adaptive-text mb-0"><i class="bi bi-file-earmark-text me-2"></i>Document Analysis Output</h5>
                 <button onclick="generatePDFReport()" class="btn btn-sm" style="background: linear-gradient(135deg, #4F46E5 0%, #EC4899 100%); color: white; border-radius: 8px; font-weight: bold; padding: 6px 14px;">
                     <i class="bi bi-file-earmark-pdf-fill me-1"></i> Download PDF
                 </button>
             </div>
-            
+
             <div class="metrics-summary-row">
                 <div class="metric-pill-card card-plag-metric">
                     <small class="d-block text-white-50 uppercase" style="color: inherit !important; opacity: 0.8;">Plagiarism Score</small>
@@ -331,15 +346,23 @@
                     <small class="d-block text-white-50 uppercase" style="color: inherit !important; opacity: 0.8;">AI Probability</small>
                     <span class="fs-4">{{ report_data.ai_score }}%</span>
                 </div>
+                <div class="metric-pill-card card-unique-metric">
+                    <small class="d-block text-white-50 uppercase" style="color: inherit !important; opacity: 0.8;">Unique Content</small>
+                    <span class="fs-4">{{ report_data.unique_score }}%</span>
+                </div>
             </div>
 
             <hr class="adaptive-border">
-            
+
             <p class="lh-lg" style="font-size: 1.05rem;">
                 {% if report_data.analysis_results %}
                     {% for item in report_data.analysis_results %}
                         {% if item.type == 'plagiarized' %}
-                            <span id="frag-{{ item.id }}" class="text-fragment fragment-plagiarized" onclick="focusSourceCard('card-src-{{ item.id }}', 'frag-{{ item.id }}')">
+                            <span id="frag-{{ item.id }}" class="text-fragment fragment-plagiarized" onclick="focusSourceCard('card-src-{{ item.id }}', 'frag-{{ item.id }}')" title="Plagiarized Overlap">
+                                {{ item.text }}
+                            </span>
+                        {% elif item.type == 'ai' %}
+                            <span id="frag-{{ item.id }}" class="text-fragment fragment-ai" title="AI Generation Detected">
                                 {{ item.text }}
                             </span>
                         {% else %}
@@ -360,9 +383,8 @@
     </div>
 
     <div id="pdf-export-template" style="display: none;">
-        
-        <div style="padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222; background: white; border: 15px double #4F46E5; min-height: 10.5in; box-sizing: border-box; position: relative;">
-            
+        <div style="padding: 20px 40px 40px 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222; background: white; border: 15px double #4F46E5; min-height: 10.5in; box-sizing: border-box; position: relative;">
+
             <div style="text-align: center; border-bottom: 3px double #333; padding-bottom: 15px; margin-bottom: 25px;">
                 <h1 style="color: #111; font-size: 26px; text-transform: uppercase; margin: 0; letter-spacing: 1px; font-family: Georgia, serif;">IntellectCheck AI</h1>
                 <h3 style="color: #444; font-size: 15px; font-weight: 600; margin: 5px 0 0 0;">Evaluation & Plagiarism Analysis Report</h3>
@@ -390,22 +412,35 @@
                     <div style="color: #d97706; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 3px;">AI Generated Weight</div>
                 </div>
                 <div style="flex: 1; background: #f0fdf4; border: 2px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 24px; font-weight: bold; color: #166534;">{% widthratio 100 1 report_data.plag_score as invert_score %}{{ 100|add:"-report_data.plag_score" }}%</div>
+                    <div style="font-size: 24px; font-weight: bold; color: #166534;">{{ report_data.unique_score }}%</div>
                     <div style="color: #16a34a; font-size: 11px; text-transform: uppercase; font-weight: bold; margin-top: 3px;">Unique Content</div>
                 </div>
             </div>
 
             <h4 style="color: #111; font-family: Georgia, serif; border-bottom: 1px dashed #ccc; padding-bottom: 5px; margin-bottom: 12px; font-size: 14px;">Analyzed Document Content:</h4>
+
             <div style="font-size: 13px; line-height: 1.8; text-align: justify; color: #333; margin-bottom: 40px; font-family: Georgia, serif;">
-                {{ text }}
+                {% if report_data.analysis_results %}
+                    {% for item in report_data.analysis_results %}
+                        {% if item.type == 'plagiarized' %}
+                            <span style="background: #fecdd3; color: #9f1239; border-bottom: 1px dashed #e11d48; padding: 1px 2px;">{{ item.text }}</span>
+                        {% elif item.type == 'ai' %}
+                            <span style="background: #fef3c7; color: #92400e; border-bottom: 1px dashed #d97706; padding: 1px 2px;">{{ item.text }}</span>
+                        {% else %}
+                            <span>{{ item.text }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% else %}
+                    {{ text }}
+                {% endif %}
             </div>
 
         </div>
 
         <div style="page-break-before: always; padding: 40px; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #222; background: white; border: 15px double #4F46E5; min-height: 10.5in; box-sizing: border-box; position: relative;">
-            
+
             <h3 style="color: #111; font-family: Georgia, serif; border-bottom: 2px solid #111; padding-bottom: 6px; font-size: 16px; margin-bottom: 25px; text-transform: uppercase; letter-spacing: 0.5px;">Matched Resources & Bibliography</h3>
-            
+
             <table style="width: 100%; border-collapse: collapse; font-size: 12px; line-height: 1.6;">
                 <thead>
                     <tr style="background-color: #f1f5f9; border-bottom: 2px solid #cbd5e1; text-align: left;">
@@ -447,7 +482,7 @@
             <h5 class="fw-bold adaptive-text mb-0">Recent Activity</h5>
             <small class="adaptive-text-muted">Last 5 Scans</small>
         </div>
-        
+
         <div class="history-card">
             <table class="table adaptive-table w-100">
                 <thead>
@@ -498,7 +533,7 @@
         const words = text ? text.split(/\s+/) : [];
         const wordCount = words.length;
 
-        wordCountDisplay.className = "word-counter"; 
+        wordCountDisplay.className = "word-counter";
         wordCountDisplay.innerText = `Words: ${wordCount} / ${MAX_WORDS}`;
         textInput.style.height = ''; textInput.style.height = textInput.scrollHeight + 'px';
 
@@ -518,7 +553,7 @@
             const file = input.files[0];
             document.getElementById('fileName').textContent = file.name;
             document.getElementById('filePreview').style.display = 'inline-flex';
-            
+
             textInput.disabled = true; textInput.placeholder = "Reading document...";
             wordCountDisplay.className = "word-counter calculating"; wordCountDisplay.innerText = "Parsing document words...";
             scanSubmitBtn.disabled = true; pdfWarningMsg.style.display = 'none';
@@ -536,7 +571,7 @@
                     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
                     const arrayBuffer = await file.arrayBuffer();
                     const pdf = await pdfjsLib.getDocument({data: arrayBuffer}).promise;
-                    
+
                     for (let i = 1; i <= pdf.numPages; i++) {
                         const page = await pdf.getPage(i); const content = await page.getTextContent();
                         const strings = content.items.map(item => item.str); extractedText += strings.join(" ") + " ";
@@ -577,8 +612,8 @@
                     <a href="${"{{ source.url }}"}" target="_blank" rel="noopener noreferrer" style="color: #818cf8; font-size: 0.85rem; word-break: break-all; text-decoration: underline;">${"{{ source.url }}"}</a></div>`;
             {% endfor %}
         {% endif %}
-        if (totalMatches > 0) { sidebar.innerHTML = sourcesHTML; } 
-        else { sidebar.innerHTML = `<p class="adaptive-text-muted small italic">100% unique repository targets found. Clean match signature matrix.</p>`; }
+        if (totalMatches > 0) { sidebar.innerHTML = sourcesHTML; }
+        else { sidebar.innerHTML = `<p class="adaptive-text-muted small" style="font-style: italic;">No matching sources found — this content looks original.</p>`; }
     });
 
     function focusSourceCard(cardId, fragId) {
@@ -602,7 +637,7 @@
 
     function toggleVoiceRecognition() {
         if (!recognition) return;
-        if (isRecording) { recognition.stop(); stopRecording(); } 
+        if (isRecording) { recognition.stop(); stopRecording(); }
         else { recognition.start(); isRecording = true; micBtn.classList.add('recording'); micBtn.setAttribute('title', 'Recording... Click to stop dictating.'); }
     }
     function stopRecording() { isRecording = false; if(micBtn) { micBtn.classList.remove('recording'); micBtn.setAttribute('title', 'Dictate Text (Voice to Text)'); } }
@@ -613,7 +648,7 @@
 
 
     // =========================================================================
-    // THE CINEMATIC HUD ANIMATION CONTROLLER 
+    // THE CINEMATIC HUD ANIMATION CONTROLLER
     // =========================================================================
     const form = document.getElementById('scanForm');
     if(form) {
@@ -622,15 +657,13 @@
             if (!fileInput.value && !textInput.value.trim()) { e.preventDefault(); alert("Please provide text or a file."); return; }
             if (isRecording) { recognition.stop(); }
 
-            // Engage HUD
             document.getElementById('loader').style.display = 'flex';
-            
+
             const progressNumber = document.getElementById('progress-number');
             const statusText = document.getElementById('scan-status');
             const loaderTitle = document.getElementById('loader-title');
             const terminalContent = document.getElementById('terminal-content');
 
-            // 1. Percentage Counter
             let progress = 0;
             const progressInterval = setInterval(() => {
                 progress += Math.floor(Math.random() * 3) + 1;
@@ -638,22 +671,21 @@
                 progressNumber.innerText = progress + "%";
             }, 300);
 
-            // 2. High-Tech Processing Titles (For AI/ML relevance)
             const titles = [
-                "NEURAL UPLINK ACTIVE",
-                "TOKENIZING TEXT VECTORS",
+                "MULTI-MODEL ENGINE ACTIVE",
+                "EXTRACTING LINGUISTIC FEATURES",
                 "SEMANTIC ANALYSIS ENGAGED",
-                "SCRAPING INTERNET REPOSITORIES",
+                "CROSS-REFERENCING REPOSITORIES",
                 "FINALIZING METRIC WEIGHTS"
             ];
             const descriptions = [
                 "Establishing secure connection to NLP models...",
                 "Running structural sentence perplexity values...",
                 "Mapping vector space against GPT architectures...",
-                "Cross-referencing live databases and cached indexes...",
+                "Executing Wikipedia JSON overlap sequences...",
                 "Compiling source overlap and generating heatmaps..."
             ];
-            
+
             let phaseIndex = 0;
             setInterval(() => {
                 phaseIndex++;
@@ -663,36 +695,29 @@
                 }
             }, 3500);
 
-            // 3. The Hacker Terminal Data Stream Engine
             const hackPhrases = [
-                "0x8F9B2 -> Hash Matched",
-                "Bypassing firewall cache...",
-                "Extracted 4209 tokens",
+                "0x8F9B2 -> Regex Parse OK",
+                "Chunking document vectors...",
+                "Extracted payload tokens",
                 "Checking BERT embeddings",
-                "Source found: en.wikipedia.org",
-                "0x1A2F -> Null pointer exception caught",
-                "Compiling cosine similarity array",
-                "Injecting prompt variables...",
-                "T5 Model responded: 200 OK",
-                "Decrypting SSL layer...",
-                "[WARN] High burstiness detected"
+                "Source query: en.wikipedia.org",
+                "Calculating cosine similarity array",
+                "Injecting sequence markers...",
+                "LLM Node responded: 200 OK",
+                "[WARN] High perplexity detected"
             ];
 
             let terminalLines = [];
             setInterval(() => {
-                // Generate a random hex code + random phrase
                 const hex = Math.floor(Math.random()*16777215).toString(16).toUpperCase();
                 const phrase = hackPhrases[Math.floor(Math.random() * hackPhrases.length)];
                 const newLine = `<div class="terminal-line">[${hex}] ${phrase}</div>`;
-                
+
                 terminalLines.push(newLine);
-                // Keep only the last 10 lines so it doesn't overflow
                 if(terminalLines.length > 10) terminalLines.shift();
-                
+
                 terminalContent.innerHTML = terminalLines.join('');
-            }, 450); // Generates a new line of code every half second!
-            
-            // Background Django submit continues normally.
+            }, 450);
         });
     }
 

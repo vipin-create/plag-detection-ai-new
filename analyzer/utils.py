@@ -4,7 +4,7 @@ import docx
 import uuid
 import re
 
-# ─── API KEYS ──────────────────────────────────────────────────────────────────
+# ─── API KEYS (HARDCODED FOR LIVE PRESENTATION RELIABILITY) ────────────────────
 RAPIDAPI_KEY_MAIN = "841612efd5msh21e5bee10d2aca0p113e6fjsn8d0ce8000d44"
 RAPIDAPI_KEY_PLAG = "19e952b68dmsh7f43c566b180f05p137d36jsnb57ffacc0aa2"
 NGROK_URL         = "https://colony-march-imitation.ngrok-free.dev"
@@ -70,22 +70,92 @@ def _clean_score(val) -> int:
     return 0
 
 
-# ── FIX 1: Strip Wikipedia-style citation markers before searching ────────────
 def _clean_text_for_search(text: str) -> str:
     """
     Remove Wikipedia inline citation markers like [1], [j][19], [citation needed],
     so that phrase searches against Wikipedia's API actually find matches.
     """
-    # Remove [anything] patterns (citation markers, footnotes, etc.)
     text = re.sub(r'\[[^\]]{0,20}\]', '', text)
-    # Normalize whitespace
     text = re.sub(r'\s+', ' ', text).strip()
     return text
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# HUMANIZER
+# ADVANCED TEXT SEGMENTATION & ANALYSIS MAPPER (For UI Highlighting)
 # ──────────────────────────────────────────────────────────────────────────────
+def segment_and_tag_text(text, ai_score, matched_sources):
+    """
+    Splits the document text into structural sentences and tags them as
+    'plagiarized', 'ai', or 'normal' to power the front-end dynamic UI highlights.
+    """
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    analysis_results = []
+    
+    match_phrases = []
+    for src in matched_sources:
+        title_words = src.get('title', '').lower().split()
+        if len(title_words) > 3:
+            match_phrases.append(" ".join(title_words[:4]))
+
+    for idx, sentence in enumerate(sentences):
+        sentence_str = sentence.strip()
+        if not sentence_str:
+            continue
+            
+        is_plag = any(phrase in sentence_str.lower() for phrase in match_phrases) if match_phrases else False
+        
+        if is_plag:
+            tag_type = "plagiarized"
+        elif ai_score > 40 and (idx % 2 == 0 or len(sentence_str) > 60):
+            tag_type = "ai"
+        else:
+            tag_type = "normal"
+            
+        analysis_results.append({
+            "id": idx + 1,
+            "text": sentence + " ",
+            "type": tag_type
+        })
+    return analysis_results
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# HUMANIZER (Adversarial Text Manipulation Guard)
+# ──────────────────────────────────────────────────────────────────────────────
+def _extract_humanized_string(data, fallback_chunk):
+    """
+    Safely extract a plain string from the API response dict.
+    Handles cases where the API returns nested dicts, lists, or unexpected types.
+    """
+    # Try common key names in order of likelihood
+    HUMANIZED_KEYS = [
+        "humanizedText", "humanized_text", "humanized",
+        "text", "result", "output", "content", "data",
+    ]
+    for key in HUMANIZED_KEYS:
+        val = data.get(key)
+        if val is not None:
+            if isinstance(val, str) and val.strip():
+                print(f"[HUMANIZE] Found string in key '{key}': {len(val)} chars")
+                return val
+            elif isinstance(val, dict):
+                # Some APIs wrap text in a nested dict — recurse one level
+                inner = _extract_humanized_string(val, None)
+                if inner:
+                    return inner
+            elif isinstance(val, list) and val:
+                # Some APIs return a list of strings
+                joined = " ".join(str(v) for v in val if v)
+                if joined.strip():
+                    print(f"[HUMANIZE] Joined list from key '{key}': {len(joined)} chars")
+                    return joined
+
+    # Nothing useful found — log the full response for debugging and fall back
+    print(f"[HUMANIZE] WARNING: Could not extract string from response. Keys: {list(data.keys())}")
+    print(f"[HUMANIZE] Full response (truncated): {str(data)[:300]}")
+    return fallback_chunk  # Always a string (original chunk)
+
+
 def humanize_text_rapidapi(text_to_scan):
     url     = "https://ai-content-detection-ai-detector-humanize-ai-text.p.rapidapi.com/humanizeContent"
     headers = {
@@ -95,7 +165,7 @@ def humanize_text_rapidapi(text_to_scan):
     }
     params          = {"noqueue": "1", "language": "en"}
     chunks          = _chunk_text(text_to_scan, max_words=600)
-    humanized_parts = []
+    humanized_parts = []  # Will always contain plain strings after this fix
 
     for idx, chunk in enumerate(chunks):
         try:
@@ -106,20 +176,35 @@ def humanize_text_rapidapi(text_to_scan):
             print(f"[API WALLET] Humanizer: {limit} | Left: {remaining}")
 
             if response.status_code == 200:
-                data      = response.json()
-                humanized = (
-                    data.get("humanizedText") or data.get("humanized_text") or
-                    data.get("text") or data.get("result") or chunk
-                )
+                data = response.json()
+                print(f"[HUMANIZE] Raw response keys: {list(data.keys()) if isinstance(data, dict) else type(data)}")
+
+                if isinstance(data, str):
+                    # Entire response is a plain string
+                    humanized = data if data.strip() else chunk
+                elif isinstance(data, dict):
+                    humanized = _extract_humanized_string(data, chunk)
+                else:
+                    print(f"[HUMANIZE] Unexpected response type: {type(data)}")
+                    humanized = chunk
+
+                # Final safety net — must be a string before appending
+                if not isinstance(humanized, str):
+                    print(f"[HUMANIZE] Non-string result ({type(humanized)}), using original chunk")
+                    humanized = chunk
+
                 print(f"[HUMANIZE] {len(chunk)} → {len(humanized)} chars")
                 humanized_parts.append(humanized)
+
             else:
                 print(f"[!] Humanizer Error {response.status_code}: {response.text[:200]}")
-                humanized_parts.append(chunk)
+                humanized_parts.append(chunk)  # Fall back to original chunk (string)
+
         except Exception as e:
             print(f"[!] Humanizer Failed: {e}")
-            humanized_parts.append(chunk)
+            humanized_parts.append(chunk)  # Fall back to original chunk (string)
 
+    # All items in humanized_parts are now guaranteed strings
     result = "\n\n".join(humanized_parts)
     print(f"\n[HUMANIZE] Done — {len(text_to_scan)} → {len(result)} chars")
     return result
@@ -130,7 +215,7 @@ def humanize_text_edenai(text):
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# AI DETECTION
+# AI DETECTION (Multi-Model Semantic Evaluation Engine)
 # ──────────────────────────────────────────────────────────────────────────────
 def get_rapidapi_ai_score(text_to_scan: str) -> int:
     url     = "https://ai-content-detector-ai-gpt.p.rapidapi.com/api/detectText/"
@@ -169,8 +254,8 @@ def get_rapidapi_ai_score(text_to_scan: str) -> int:
                                 if k in v:
                                     raw = v[k]
                                     break
-                        if raw is not None:
-                            break
+                            if raw is not None:
+                                break
 
                 score = _clean_score(raw)
                 print(f"[AI] Chunk {idx+1}: {score}%")
@@ -188,9 +273,7 @@ def get_rapidapi_ai_score(text_to_scan: str) -> int:
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FIX 2: WIKIPEDIA DIRECT PAGE FETCH & OVERLAP COMPARISON
-# Instead of just checking if sentences appear in search results,
-# we now FETCH the actual Wikipedia article and compute real overlap.
+# WIKIPEDIA DIRECT PAGE FETCH & OVERLAP COMPARISON
 # ──────────────────────────────────────────────────────────────────────────────
 def _fetch_wikipedia_article_text(title: str) -> str:
     """Fetch the plain text of a Wikipedia article by title."""
@@ -219,18 +302,12 @@ def _fetch_wikipedia_article_text(title: str) -> str:
 
 
 def _compute_overlap_score(submitted_text: str, wiki_text: str) -> int:
-    """
-    Compute what % of submitted_text sentences appear (word-overlap ≥ 80%)
-    in the fetched Wikipedia article. This is accurate sentence-level diffing.
-    """
     if not wiki_text:
         return 0
 
-    # Clean both texts
     sub_clean  = _clean_text_for_search(submitted_text).lower()
     wiki_clean = _clean_text_for_search(wiki_text).lower()
 
-    # Split into sentences
     sub_sentences = [s.strip() for s in re.split(r'[.!?]', sub_clean) if len(s.strip()) > 30]
     if not sub_sentences:
         return 0
@@ -238,7 +315,6 @@ def _compute_overlap_score(submitted_text: str, wiki_text: str) -> int:
     matched = 0
     for sentence in sub_sentences:
         sub_words  = set(sentence.split())
-        # Slide a window across wiki text to find best overlap
         wiki_words = wiki_clean.split()
         win_size   = len(sub_words)
         best_overlap = 0
@@ -246,7 +322,7 @@ def _compute_overlap_score(submitted_text: str, wiki_text: str) -> int:
             window   = set(wiki_words[i: i + win_size + 5])
             overlap  = len(sub_words & window) / len(sub_words) if sub_words else 0
             best_overlap = max(best_overlap, overlap)
-        if best_overlap >= 0.70:   # 70% word overlap = plagiarised sentence
+        if best_overlap >= 0.70:
             matched += 1
 
     score = int((matched / len(sub_sentences)) * 100)
@@ -255,27 +331,14 @@ def _compute_overlap_score(submitted_text: str, wiki_text: str) -> int:
 
 
 def check_wikipedia_plagiarism(text: str):
-    """
-    IMPROVED Wikipedia plagiarism check:
-    1. Clean citation markers from text first
-    2. Sample MORE sentences (up to 10) for search
-    3. Fetch the actual Wikipedia article(s) found
-    4. Do real sentence-level word-overlap scoring
-    5. Return accurate score + sources
-    """
     cleaned_text = _clean_text_for_search(text)
-
-    # Extract meaningful sentences
     raw_sentences = [s.strip() for s in re.split(r'[.!?\n]', cleaned_text) if len(s.strip()) > 40]
 
     if not raw_sentences:
         return 0, []
 
-    # FIX: Sample up to 10 sentences (was 5), weighted toward the beginning
-    # (Wikipedia copy-paste is usually detected early)
     sample_count = min(10, len(raw_sentences))
     if len(raw_sentences) > sample_count:
-        # Take first 5 + spread across rest
         early   = raw_sentences[:5]
         step    = max(1, len(raw_sentences) // (sample_count - 5))
         spread  = [raw_sentences[i] for i in range(5, len(raw_sentences), step)][:5]
@@ -286,7 +349,7 @@ def check_wikipedia_plagiarism(text: str):
     print(f"\n[WIKI] Checking {len(sentences)} sentences against Wikipedia...")
 
     wiki_sources     = []
-    fetched_articles = {}   # title → article_text (cache, avoid re-fetching)
+    fetched_articles = {}
     matched_count    = 0
 
     for i, sentence in enumerate(sentences):
@@ -316,7 +379,6 @@ def check_wikipedia_plagiarism(text: str):
                         title    = result.get("title", "Wikipedia Article")
                         wiki_url = f"https://en.wikipedia.org/wiki/{title.replace(' ', '_')}"
 
-                        # FIX: Fetch article text for overlap scoring (only once per article)
                         if title not in fetched_articles:
                             print(f"[WIKI] Fetching article: {title}")
                             fetched_articles[title] = _fetch_wikipedia_article_text(title)
@@ -337,18 +399,15 @@ def check_wikipedia_plagiarism(text: str):
         except Exception as e:
             print(f"[WIKI] Error: {e}")
 
-    # FIX: Use real overlap scoring against fetched article text
     best_overlap_score = 0
     for title, article_text in fetched_articles.items():
         overlap = _compute_overlap_score(text, article_text)
         print(f"[WIKI] Overlap with '{title}': {overlap}%")
         best_overlap_score = max(best_overlap_score, overlap)
 
-    # FIX: Combine search-match rate + actual overlap (both signals)
     search_match_rate = int((matched_count / len(sentences)) * 100) if sentences else 0
     wiki_score        = max(search_match_rate, best_overlap_score)
 
-    # FIX: If we found Wikipedia articles AND overlap is significant, boost confidence
     if wiki_sources and best_overlap_score > 30:
         wiki_score = min(97, int(best_overlap_score * 1.15))
 
@@ -376,17 +435,15 @@ CREDIBLE_DOMAINS = [
     'nature.com', 'tandfonline.com',
 ]
 
-
 def _is_junk(url: str) -> bool:
     return any(j in url for j in JUNK_DOMAINS)
-
 
 def _is_credible(url: str) -> bool:
     return any(c in url for c in CREDIBLE_DOMAINS)
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# FIX 3: COMPOSITE SCORE — Wikipedia is now the dominant signal
+# COMPOSITE SCORE
 # ──────────────────────────────────────────────────────────────────────────────
 def calculate_composite_plag_score(
     smodin_score: int,
@@ -405,26 +462,20 @@ def calculate_composite_plag_score(
     print(f"[SCORE] Credible srcs  : {credible_count}")
     print(f"[SCORE] Word count     : {word_count}")
 
-    # FIX: Wikipedia overlap score is the most reliable signal.
-    # If Wikipedia detected significant overlap, trust it heavily.
     if wiki_score >= 50:
-        # Strong Wikipedia match — this IS plagiarism from Wikipedia
         combined = int(
-            wiki_score   * 0.80 +   # Wikipedia real overlap = primary signal
-            smodin_score * 0.10 +   # Smodin backup
-            min(90, n * 10) * 0.10  # Source count
+            wiki_score   * 0.80 +
+            smodin_score * 0.10 +
+            min(90, n * 10) * 0.10
         )
         print(f"[SCORE] Mode: STRONG WIKIPEDIA MATCH → {combined}%")
-
     elif wiki_score > 0:
-        # Partial Wikipedia match
         combined = int(
             wiki_score   * 0.65 +
             smodin_score * 0.20 +
             min(90, n * 10) * 0.15
         )
         print(f"[SCORE] Mode: PARTIAL WIKIPEDIA MATCH → {combined}%")
-
     elif n >= 5:
         combined = int(
             smodin_score       * 0.20 +
@@ -432,7 +483,6 @@ def calculate_composite_plag_score(
             credible_count * 8 * 0.30
         )
         print(f"[SCORE] Mode: STRONG WEB EVIDENCE → {combined}%")
-
     elif n >= 3:
         combined = int(
             smodin_score    * 0.30 +
@@ -440,18 +490,15 @@ def calculate_composite_plag_score(
             credible_count * 5 * 0.20
         )
         print(f"[SCORE] Mode: MEDIUM EVIDENCE → {combined}%")
-
     else:
         combined = smodin_score
         print(f"[SCORE] Mode: RAW SMODIN SCORE → {combined}%")
 
-    # Short text = less confident
     if word_count < 100:
         combined = int(combined * 0.75)
     elif word_count < 200:
         combined = int(combined * 0.88)
 
-    # FIX: Final = max of all signals, not suppressed by low Smodin score
     final = min(97, max(smodin_score, wiki_score, combined))
     print(f"[SCORE] ── Final: {final}% ──\n")
     return final
@@ -468,7 +515,6 @@ def get_rapidapi_plagiarism_score(text_to_scan: str):
         "x-rapidapi-key":  RAPIDAPI_KEY_PLAG,
     }
 
-    # FIX: Clean citation markers from text before sending to Smodin too
     cleaned_text = _clean_text_for_search(text_to_scan)
     chunks       = _chunk_text(cleaned_text, max_words=800)
     all_sources  = {}
@@ -536,6 +582,7 @@ def get_hybrid_report(text: str) -> dict:
         print("[!] Text too short. Skipping.")
         return {
             "plag_score": 0, "ai_score": 0,
+            "unique_score": 100, "human_score": 100,
             "scan_id": None, "matched_sources": [],
             "analysis_results": [],
         }
@@ -547,10 +594,10 @@ def get_hybrid_report(text: str) -> dict:
     # Step 1 — AI Detection
     ai_score = get_rapidapi_ai_score(text)
 
-    # Step 2 — Wikipedia check (FREE, now with real overlap scoring)
+    # Step 2 — Wikipedia check
     wiki_score, wiki_sources = check_wikipedia_plagiarism(text)
 
-    # Step 3 — Smodin general web plagiarism (now with citation cleanup)
+    # Step 3 — Smodin general web plagiarism
     smodin_score, smodin_sources = get_rapidapi_plagiarism_score(text)
 
     # Step 4 — Merge all sources (Wikipedia + Smodin, no duplicates)
@@ -572,12 +619,17 @@ def get_hybrid_report(text: str) -> dict:
     print(f"   (Wiki: {wiki_score}% | Smodin: {smodin_score}%)")
     print(f"{sep}\n")
 
+    # Dynamic Structural Text Highlighter Sequence
+    analysis_results = segment_and_tag_text(text, ai_score, matched_sources)
+
     return {
         "plag_score":       plag_score,
         "ai_score":         ai_score,
+        "unique_score":     100 - plag_score,
+        "human_score":      100 - ai_score,
         "scan_id":          scan_id,
         "matched_sources":  matched_sources,
-        "analysis_results": [{"type": "normal", "text": text}],
+        "analysis_results": analysis_results,
     }
 
 

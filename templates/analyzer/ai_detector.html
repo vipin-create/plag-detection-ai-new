@@ -1,84 +1,481 @@
 {% extends 'base.html' %}
+{% block title %}Advanced AI Verification Module{% endblock %}
 
-{% block title %}AI Content Detector{% endblock %}
+{% block extra_css %}
+<style>
+    :root {
+        --ic-bg-glass: rgba(30, 41, 59, 0.7);
+        --ic-bg-panel: rgba(30, 41, 59, 0.4);
+        --ic-bg-sidebar: rgba(15, 23, 42, 0.6);
+        --ic-bg-overlay: rgba(15, 23, 42, 0.95);
+        --ic-text-main: #f8fafc;
+        --ic-text-muted: #94a3b8;
+        --ic-border: rgba(255, 255, 255, 0.1);
+        --ic-menu: #1e293b;
+        --ic-btn-bg: rgba(255, 255, 255, 0.05);
+        --ic-hover: rgba(255, 255, 255, 0.1);
+        --neon-cyan: #64ffda;
+        --neon-cyan-dim: rgba(100, 255, 218, 0.15);
+    }
+    [data-bs-theme="light"],[data-theme="light"],.light-mode,body.bg-light,body.bg-white {
+        --ic-bg-glass: rgba(255,255,255,0.85);
+        --ic-bg-panel: rgba(255,255,255,0.95);
+        --ic-bg-sidebar: rgba(248,250,252,0.95);
+        --ic-bg-overlay: rgba(255,255,255,0.95);
+        --ic-text-main: #0f172a;
+        --ic-text-muted: #64748b;
+        --ic-border: rgba(0,0,0,0.1);
+        --ic-menu: #ffffff;
+        --ic-btn-bg: rgba(0,0,0,0.04);
+        --ic-hover: rgba(0,0,0,0.08);
+        --neon-cyan: #0891b2;
+        --neon-cyan-dim: rgba(8,145,178,0.12);
+    }
+    .adaptive-text       { color: var(--ic-text-main) !important; transition: color 0.3s; }
+    .adaptive-text-muted { color: var(--ic-text-muted) !important; transition: color 0.3s; }
+    .adaptive-border     { border-color: var(--ic-border) !important; transition: border-color 0.3s; }
+
+    /* ── LOADER ── */
+    .scan-overlay {
+        position: fixed; top:0; left:0; width:100%; height:100%;
+        background: radial-gradient(ellipse at center,#050f1e 0%,#010308 100%);
+        z-index:9999; display:none; flex-direction:column;
+        align-items:center; justify-content:center;
+        overflow:hidden; font-family:'Courier New',Courier,monospace;
+    }
+    .radar-grid {
+        position:absolute; top:0; left:0; width:100%; height:100%;
+        background-image: linear-gradient(rgba(100,255,218,0.03) 1px,transparent 1px),
+                          linear-gradient(90deg,rgba(100,255,218,0.03) 1px,transparent 1px);
+        background-size:40px 40px; pointer-events:none;
+    }
+    .radar-wrap { position:relative; width:280px; height:280px; display:flex; align-items:center; justify-content:center; margin-bottom:36px; z-index:10; }
+    .radar-ring { position:absolute; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); border:1px solid rgba(100,255,218,0.18); }
+    .radar-ring-1 { width:280px; height:280px; border-color:rgba(100,255,218,0.22); }
+    .radar-ring-2 { width:200px; height:200px; border-color:rgba(100,255,218,0.16); }
+    .radar-ring-3 { width:120px; height:120px; border-color:rgba(100,255,218,0.12); }
+    .radar-ring-4 { width:50px;  height:50px;  border-color:rgba(100,255,218,0.20); }
+    .radar-crosshair { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:280px; height:280px; }
+    .radar-crosshair::before,.radar-crosshair::after { content:''; position:absolute; background:rgba(100,255,218,0.12); }
+    .radar-crosshair::before { width:1px; height:100%; top:0; left:50%; }
+    .radar-crosshair::after  { height:1px; width:100%; left:0; top:50%; }
+    .radar-sweep {
+        position:absolute; width:140px; height:140px; top:50%; left:50%; transform-origin:0% 0%;
+        animation:radarSweep 2.8s linear infinite; border-radius:0 100% 0 0;
+        background:conic-gradient(from 0deg,transparent 0deg,rgba(100,255,218,0.03) 30deg,rgba(100,255,218,0.22) 60deg,rgba(100,255,218,0.45) 85deg,rgba(100,255,218,0.70) 90deg);
+        filter:blur(1px);
+    }
+    .radar-sweep::after { content:''; position:absolute; top:0; left:0; width:100%; height:2px; background:linear-gradient(90deg,rgba(100,255,218,0.9),transparent); transform-origin:0% 0%; transform:rotate(90deg) translateX(-100%); box-shadow:0 0 12px 3px rgba(100,255,218,0.6); }
+    @keyframes radarSweep { 100% { transform:rotate(360deg); } }
+    .radar-pulse { position:absolute; border-radius:50%; top:50%; left:50%; transform:translate(-50%,-50%); border:2px solid rgba(100,255,218,0.6); animation:radarPulse 2.8s ease-out infinite; width:10px; height:10px; }
+    .radar-pulse:nth-child(2) { animation-delay:0.9s; }
+    .radar-pulse:nth-child(3) { animation-delay:1.8s; }
+    @keyframes radarPulse { 0% { width:10px; height:10px; opacity:0.8; } 100% { width:280px; height:280px; opacity:0; } }
+    .radar-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background:#64ffda; box-shadow:0 0 10px 4px rgba(100,255,218,0.6); z-index:5; }
+    .radar-blip { position:absolute; border-radius:50%; width:5px; height:5px; background:#64ffda; box-shadow:0 0 6px 2px rgba(100,255,218,0.7); opacity:0; animation:blipAppear 2.8s ease-out forwards; }
+    @keyframes blipAppear { 0% { opacity:0; transform:scale(0); } 15% { opacity:1; transform:scale(1.4); } 60% { opacity:0.6; } 100% { opacity:0; } }
+    .radar-percentage { font-size:3.8rem; font-weight:900; color:#fff; text-shadow:0 0 8px rgba(100,255,218,0.5),0 0 20px rgba(100,255,218,0.25); font-variant-numeric:tabular-nums; font-family:'Arial',sans-serif; letter-spacing:-2px; z-index:20; position:relative; }
+    .radar-title { color:#ffffff; font-size:1.3rem; letter-spacing:6px; font-weight:700; text-transform:uppercase; text-shadow:0 0 12px rgba(100,255,218,0.4); margin-bottom:10px; z-index:10; }
+    .radar-status { color:#64ffda; font-size:0.95rem; letter-spacing:2px; animation:textPulse 1.2s ease-in-out infinite; z-index:10; }
+    @keyframes textPulse { 0%,100% { opacity:0.5; } 50% { opacity:1; text-shadow:0 0 8px #64ffda; } }
+    .radar-readout { position:absolute; left:5%; top:50%; transform:translateY(-50%); width:200px; z-index:10; font-size:0.78rem; color:rgba(100,255,218,0.7); line-height:1.8; font-family:'Courier New',monospace; }
+    .readout-label { color:rgba(100,255,218,0.4); font-size:0.65rem; letter-spacing:2px; text-transform:uppercase; }
+
+    /* ── PAGE ── */
+    .page-container { max-width:900px; margin:0 auto; padding:30px 20px 80px; min-height:calc(100vh - 80px); display:flex; flex-direction:column; align-items:center; }
+    .brand-icon { font-size:4.5rem; background:linear-gradient(135deg,#64ffda 0%,#0891b2 100%); -webkit-background-clip:text; -webkit-text-fill-color:transparent; display:inline-block; filter:drop-shadow(0 0 20px rgba(100,255,218,0.3)); animation:iconGlow 3s ease-in-out infinite; margin-bottom:16px; }
+    @keyframes iconGlow { 0%,100% { filter:drop-shadow(0 0 18px rgba(100,255,218,0.25)); } 50% { filter:drop-shadow(0 0 32px rgba(100,255,218,0.5)); } }
+
+    /* ── INPUT BOX ── */
+    .input-wrapper { width:100%; background:var(--ic-bg-glass); backdrop-filter:blur(12px); border:1px solid var(--ic-border); border-radius:22px; padding:18px 22px; box-shadow:0 4px 30px rgba(0,0,0,0.1); transition:all 0.3s cubic-bezier(0.25,0.8,0.25,1); margin-bottom:30px; }
+    .input-wrapper:focus-within { border-color:rgba(100,255,218,0.4); box-shadow:0 0 28px rgba(100,255,218,0.12); transform:translateY(-2px); }
+    .chat-input { width:100%; background:transparent; border:none; padding:8px 0; font-size:1rem; line-height:1.6; color:var(--ic-text-main); resize:none; max-height:260px; min-height:100px; font-family:inherit; transition:color 0.3s; }
+    .chat-input:focus { outline:none; }
+    .chat-input::placeholder { color:var(--ic-text-muted); }
+
+    .input-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
+    .input-top-label { font-size:0.78rem; color:var(--ic-text-muted); letter-spacing:1px; text-transform:uppercase; }
+
+    /* ── FOOTER ROW: word count | attach + scan ── */
+    .input-footer { display:flex; align-items:center; justify-content:space-between; padding-top:10px; border-top:1px solid var(--ic-border); margin-top:8px; }
+    .word-counter { font-size:0.85rem; color:var(--ic-text-muted); transition:color 0.3s; }
+    .word-counter.limit-exceeded { color:#ef4444; font-weight:bold; }
+    .footer-actions { display:flex; align-items:center; gap:10px; }
+
+    /* Attach control (bottom right, small) — now a <label>, not a <button> */
+    .btn-attach-sm { width:38px; height:38px; border-radius:50%; background:var(--ic-btn-bg); border:1px solid var(--ic-border); color:var(--ic-text-muted); font-size:1.1rem; display:flex; align-items:center; justify-content:center; cursor:pointer; transition:all 0.2s; flex-shrink:0; }
+    .btn-attach-sm:hover { background:var(--ic-hover); color:var(--ic-text-main); }
+
+    /* Scan button */
+    .btn-scan { position:relative; overflow:hidden; padding:10px 28px; border-radius:12px; border:none; background:linear-gradient(135deg,#0891b2,#64ffda); color:#0f172a; font-weight:700; font-size:0.95rem; letter-spacing:0.5px; cursor:pointer; transition:all 0.3s; box-shadow:0 4px 16px rgba(100,255,218,0.25); display:flex; align-items:center; gap:8px; }
+    .btn-scan::before { content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,0.35),transparent); transition:0.5s ease; z-index:0; }
+    .btn-scan:hover:not(:disabled)::before { left:100%; }
+    .btn-scan:hover:not(:disabled) { transform:translateY(-2px); box-shadow:0 6px 22px rgba(100,255,218,0.4); }
+    .btn-scan:disabled { background:var(--ic-btn-bg); color:var(--ic-text-muted); cursor:not-allowed; box-shadow:none; }
+    .btn-scan span,.btn-scan i { position:relative; z-index:1; }
+
+    /* File badge */
+    .file-badge { display:none; background:rgba(100,255,218,0.1); border:1px solid rgba(100,255,218,0.25); color:var(--neon-cyan); padding:6px 14px; border-radius:10px; font-size:0.88rem; font-weight:500; align-items:center; gap:8px; width:fit-content; animation:slideUp 0.3s ease; margin-bottom:10px; }
+    @keyframes slideUp { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── RESULTS ── */
+    .results-wrap { width:100%; animation:fadeUp 0.5s ease; }
+    @keyframes fadeUp { from { opacity:0; transform:translateY(16px); } to { opacity:1; transform:translateY(0); } }
+
+    .score-hero { background:var(--ic-bg-panel); border:1px solid var(--ic-border); border-radius:20px; padding:30px; display:flex; align-items:center; gap:40px; margin-bottom:24px; flex-wrap:wrap; }
+    .score-ring-wrap { position:relative; width:140px; height:140px; flex-shrink:0; }
+    .score-ring-wrap svg { transform:rotate(-90deg); }
+    .score-ring-bg   { fill:none; stroke:var(--ic-border); stroke-width:10; }
+    .score-ring-fill { fill:none; stroke-width:10; stroke-linecap:round; transition:stroke-dashoffset 1.2s cubic-bezier(0.25,0.8,0.25,1); }
+    .score-ring-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; }
+    .score-ring-pct { font-size:1.9rem; font-weight:900; color:var(--ic-text-main); line-height:1; }
+    .score-ring-sub { font-size:0.68rem; color:var(--ic-text-muted); text-transform:uppercase; letter-spacing:1px; }
+
+    .score-meta { flex:1; min-width:200px; }
+    .score-verdict { font-size:1.5rem; font-weight:800; color:var(--ic-text-main); margin-bottom:6px; }
+    .score-desc { color:var(--ic-text-muted); font-size:0.95rem; line-height:1.6; }
+
+    .conf-bars { margin-top:20px; display:flex; flex-direction:column; gap:10px; }
+    .conf-row { display:flex; align-items:center; gap:12px; }
+    .conf-label { width:110px; font-size:0.82rem; color:var(--ic-text-muted); flex-shrink:0; }
+    .conf-track { flex:1; height:6px; border-radius:99px; background:var(--ic-btn-bg); overflow:hidden; }
+    .conf-fill { height:100%; border-radius:99px; transition:width 1.2s cubic-bezier(0.25,0.8,0.25,1); }
+    .conf-pct { width:38px; text-align:right; font-size:0.82rem; color:var(--ic-text-muted); }
+
+    /* ── PDF DOWNLOAD BUTTON ── */
+    .btn-pdf { display:inline-flex; align-items:center; gap:8px; padding:10px 22px; border-radius:12px; border:1px solid rgba(100,255,218,0.3); background:rgba(100,255,218,0.08); color:var(--neon-cyan); font-size:0.9rem; font-weight:600; cursor:pointer; transition:all 0.2s; text-decoration:none; }
+    .btn-pdf:hover { background:rgba(100,255,218,0.18); border-color:rgba(100,255,218,0.5); color:var(--neon-cyan); transform:translateY(-1px); }
+
+    /* ── ANALYSIS PANEL ── */
+    .analysis-panel { background:var(--ic-bg-panel); border:1px solid var(--ic-border); border-radius:20px; padding:28px; color:var(--ic-text-main); }
+    .text-fragment { padding:2px 0; transition:all 0.2s ease; }
+    .fragment-ai { border-bottom:2px solid rgba(245,158,11,0.7); background:linear-gradient(to bottom,transparent 78%,rgba(245,158,11,0.14) 78%); cursor:help; }
+    .fragment-ai:hover { background:linear-gradient(to bottom,transparent 70%,rgba(245,158,11,0.26) 70%); }
+    .fragment-human { border-bottom:2px solid rgba(34,197,94,0.6); background:linear-gradient(to bottom,transparent 78%,rgba(34,197,94,0.10) 78%); }
+    .legend { display:flex; gap:20px; margin-bottom:16px; flex-wrap:wrap; }
+    .legend-item { display:flex; align-items:center; gap:7px; font-size:0.83rem; color:var(--ic-text-muted); }
+    .legend-dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
+    .panel-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .panel-title { font-size:1rem; font-weight:700; color:var(--ic-text-main); display:flex; align-items:center; gap:8px; }
+
+    /* ── PDF TEMPLATE (hidden, printed) ── */
+    #pdfTemplate { display:none; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid">
-    <h3 class="fw-bold mb-4 text-warning">AI Content Detector</h3>
-    
-    <div class="row">
-        <div class="col-md-8">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-4">
-                    <form method="POST" enctype="multipart/form-data" action="{% url 'ai_detector' %}">
-                        {% csrf_token %}
-                        <div class="mb-3">
-                            <label class="form-label text-muted">Paste text or upload a file to check for AI patterns:</label>
-                            <textarea name="text_input" class="form-control" rows="10" placeholder="Paste text..." style="border-radius: 10px; resize: none;">{{ text }}</textarea>
-                            
-                            <div class="mt-3">
-                                <label for="file-upload" class="btn btn-outline-warning rounded-pill">
-                                    <i class="bi bi-plus-circle-fill me-2"></i>Upload Document (PDF/DOCX)
-                                </label>
-                                <input id="file-upload" type="file" name="document" style="display: none;" onchange="this.form.submit()">
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-warning text-white btn-lg rounded-pill px-5">
-                            <i class="bi bi-robot me-2"></i>Check for AI
-                        </button>
-                    </form>
 
-                    {% if ai_score is not None %}
-                    <div class="mt-4 p-4 rounded-3 bg-light border-start border-warning border-4 shadow-sm">
-                        <div class="d-flex align-items-center justify-content-between">
-                            <div>
-                                <h4 class="fw-bold mb-1 text-dark">Detection Result</h4>
-                                <p class="text-muted mb-0">Analysis of perplexity and burstiness patterns completed.</p>
-                            </div>
-                            <div class="text-center">
-                                <span class="display-4 fw-bold text-warning">{{ ai_score }}%</span>
-                                <div class="small text-uppercase fw-bold text-muted">AI Probability</div>
-                            </div>
-                        </div>
-                        
-                        <div class="progress mt-3" style="height: 12px; border-radius: 10px;">
-                            <div class="progress-bar bg-warning" role="progressbar" 
-                                 style="width: {{ ai_score }}%; transition: width 1s ease-in-out;" 
-                                 aria-valuenow="{{ ai_score }}" aria-valuemin="0" aria-valuemax="100">
-                            </div>
-                        </div>
-                        
-                        <div class="mt-3">
-                            {% if ai_score > 70 %}
-                                <span class="badge bg-danger p-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Highly likely to be AI</span>
-                            {% elif ai_score > 30 %}
-                                <span class="badge bg-warning p-2 text-dark"><i class="bi bi-info-circle-fill me-1"></i> Mixed / Possible AI</span>
-                            {% else %}
-                                <span class="badge bg-success p-2"><i class="bi bi-check-circle-fill me-1"></i> Likely Human Written</span>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-        </div>
-        
-        <div class="col-md-4">
-            <div class="card border-0 bg-white p-4 h-100 shadow-sm">
-                <h5 class="fw-bold">How it works</h5>
-                <p class="text-muted small">This tool uses the **Sapling AI API** to analyze sentence structure. Scores above 50% suggest the text may be machine-generated.</p>
-                <hr>
-                <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-check-circle-fill text-success me-2"></i> <span>Checks GPT-4, Gemini & Claude</span>
-                </div>
-                <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-check-circle-fill text-success me-2"></i> <span>Instant API-based Analysis</span>
-                </div>
-                <div class="d-flex align-items-center">
-                    <i class="bi bi-check-circle-fill text-success me-2"></i> <span>Detects AI Humanizers</span>
-                </div>
-            </div>
-        </div>
+<!-- RADAR LOADER -->
+<div class="scan-overlay" id="loader">
+    <div class="radar-grid"></div>
+    <div class="radar-readout">
+        <div class="readout-label">Signal</div><div id="readout-signal">—</div><br>
+        <div class="readout-label">Mode</div><div>NEURAL_SWEEP</div><br>
+        <div class="readout-label">Contacts</div><div id="readout-contacts">0</div><br>
+        <div class="readout-label">Progress</div><div id="readout-progress">0%</div>
     </div>
+    <div class="radar-wrap" id="radarWrap">
+        <div class="radar-ring radar-ring-1"></div>
+        <div class="radar-ring radar-ring-2"></div>
+        <div class="radar-ring radar-ring-3"></div>
+        <div class="radar-ring radar-ring-4"></div>
+        <div class="radar-crosshair"></div>
+        <div class="radar-sweep"></div>
+        <div class="radar-pulse"></div>
+        <div class="radar-pulse"></div>
+        <div class="radar-pulse"></div>
+        <div class="radar-center"></div>
+    </div>
+    <div class="radar-title" id="radar-title">AI PATTERN RECOGNITION</div>
+    <div class="radar-status" id="radar-status">Initialising neural sweep...</div>
 </div>
+
+<div class="page-container">
+
+    <div class="text-center mb-4 mt-4">
+        <i class="bi bi-cpu brand-icon"></i>
+        <h2 class="fw-bold mb-2 adaptive-text">AI Content Detector</h2>
+        <p class="adaptive-text-muted mb-0">Paste text or upload a file. The neural radar will sweep for AI-generated patterns.</p>
+    </div>
+
+    <!-- FORM: enctype required for file upload -->
+    <form method="POST" action="{% url 'ai_detector' %}" enctype="multipart/form-data" id="aiForm" style="width:100%;">
+        {% csrf_token %}
+
+        <!-- File badge shown after attach -->
+        <div class="file-badge" id="filePreview">
+            <i class="bi bi-file-earmark-text-fill"></i>
+            <span id="fileName">document</span>
+            <i class="bi bi-x-lg" style="cursor:pointer;margin-left:6px;opacity:0.7;" onclick="removeFile()"></i>
+        </div>
+
+        <!-- Hidden file input — opened natively via the <label for="fileInput"> below, no JS needed to trigger it -->
+        <input type="file" id="fileInput" name="document" accept=".pdf,.docx,.txt" style="display:none;" onchange="handleFileAttach(this)">
+
+        <div class="input-wrapper">
+            <div class="input-top">
+                <span class="input-top-label">Text Input</span>
+            </div>
+
+            <textarea name="text_input" id="text_input" class="chat-input"
+                placeholder="Paste or type the text you want to analyse for AI-generated content...">{{ text }}</textarea>
+
+            <div class="input-footer">
+                <span class="word-counter" id="wordCountDisplay">0 / 1000 words</span>
+                <div class="footer-actions">
+                    <!-- FIXED: native <label> trigger instead of onclick + document.getElementById -->
+                    <label for="fileInput" class="btn-attach-sm" title="Upload PDF, DOCX or TXT">
+                        <i class="bi bi-upload"></i>
+                    </label>
+                    <button type="submit" class="btn-scan" id="scanBtn">
+                        <i class="bi bi-broadcast"></i>
+                        <span>Run Neural Scan</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+
+    {% if result %}
+    <div class="results-wrap">
+
+        <!-- Score hero card -->
+        <div class="score-hero">
+            <div class="score-ring-wrap">
+                <svg width="140" height="140" viewBox="0 0 140 140">
+                    <circle class="score-ring-bg" cx="70" cy="70" r="60"/>
+                    <circle class="score-ring-fill" id="scoreRingFill" cx="70" cy="70" r="60"
+                        stroke-dasharray="376.99" stroke-dashoffset="376.99" stroke="#f59e0b"/>
+                </svg>
+                <div class="score-ring-label">
+                    <div class="score-ring-pct" id="scoreDisplay">0%</div>
+                    <div class="score-ring-sub">AI prob.</div>
+                </div>
+            </div>
+
+            <div class="score-meta">
+                <div class="score-verdict" id="verdictText">Analysing…</div>
+                <div class="score-desc" id="verdictDesc">
+                    {% if result.ai_score >= 80 %}Very high probability this content was generated by an AI language model.
+                    {% elif result.ai_score >= 50 %}Moderate AI signals detected. Some sections may be machine-written.
+                    {% elif result.ai_score >= 20 %}Low-level AI patterns present. Mostly appears human-authored.
+                    {% else %}Strong indicators of human authorship. No significant AI patterns detected.{% endif %}
+                </div>
+
+                <div class="conf-bars">
+                    <div class="conf-row">
+                        <span class="conf-label">AI Generated</span>
+                        <div class="conf-track"><div class="conf-fill" id="barAI" style="width:0%;background:linear-gradient(90deg,#f59e0b,#ef4444);"></div></div>
+                        <span class="conf-pct">{{ result.ai_score }}%</span>
+                    </div>
+                    <div class="conf-row">
+                        <span class="conf-label">Human Written</span>
+                        <div class="conf-track"><div class="conf-fill" id="barHuman" style="width:0%;background:linear-gradient(90deg,#22c55e,#16a34a);"></div></div>
+                        <span class="conf-pct">{{ result.human_score }}%</span>
+                    </div>
+                </div>
+
+                <!-- PDF DOWNLOAD BUTTON -->
+                <div class="mt-3">
+                    <button class="btn-pdf" onclick="downloadAIReport()">
+                        <i class="bi bi-file-earmark-pdf-fill"></i> Download PDF Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sentence breakdown -->
+        <div class="analysis-panel">
+            <div class="panel-header">
+                <div class="panel-title"><i class="bi bi-file-earmark-text"></i> Sentence-Level Breakdown</div>
+            </div>
+            <div class="legend">
+                <div class="legend-item"><span class="legend-dot" style="background:#f59e0b;"></span> AI-flagged sentence</div>
+                <div class="legend-item"><span class="legend-dot" style="background:#22c55e;"></span> Human-written</div>
+                <div class="legend-item"><span class="legend-dot" style="background:var(--ic-text-muted);opacity:0.4;"></span> Neutral / unclear</div>
+            </div>
+            <p class="lh-lg" style="font-size:1.02rem;" id="analysisText">
+                {% if result.analysis_results %}
+                    {% for item in result.analysis_results %}
+                        {% if item.type == 'ai' %}<span class="text-fragment fragment-ai" title="AI-generated pattern detected">{{ item.text }}</span>
+                        {% elif item.type == 'human' %}<span class="text-fragment fragment-human" title="Human-written">{{ item.text }}</span>
+                        {% else %}<span class="text-fragment adaptive-text" style="opacity:0.85;">{{ item.text }}</span>{% endif %}
+                    {% endfor %}
+                {% else %}
+                    <span class="adaptive-text" style="opacity:0.85;">{{ text }}</span>
+                {% endif %}
+            </p>
+        </div>
+
+    </div>
+    {% endif %}
+
+</div>
+
+<!-- ── HIDDEN PDF TEMPLATE ── -->
+<div id="pdfTemplate"></div>
+
+<script>
+    /* ── Cache element references once, at load time ──
+       (Avoids repeated document.getElementById lookups inside handlers later) */
+    const textInput   = document.getElementById('text_input');
+    const wordDisplay = document.getElementById('wordCountDisplay');
+    const scanBtn     = document.getElementById('scanBtn');
+    const fileInputEl = document.getElementById('fileInput');
+    const filePreview = document.getElementById('filePreview');
+    const fileNameEl  = document.getElementById('fileName');
+    const MAX_WORDS   = 1000;
+
+    function updateWordCount() {
+        const words = textInput.value.trim() ? textInput.value.trim().split(/\s+/) : [];
+        const n = words.length;
+        wordDisplay.className = 'word-counter' + (n > MAX_WORDS ? ' limit-exceeded' : '');
+        wordDisplay.innerText = `${n} / ${MAX_WORDS} words`;
+        textInput.style.height = ''; textInput.style.height = textInput.scrollHeight + 'px';
+        scanBtn.disabled = n > MAX_WORDS;
+    }
+    textInput.addEventListener('input', updateWordCount);
+    updateWordCount();
+
+    /* ── File attach — just show badge, let Django extract the file server-side ──
+       The picker itself now opens via the native <label for="fileInput">, no JS needed for that part. */
+    function handleFileAttach(input) {
+        if (!input.files || !input.files[0]) return;
+        const file = input.files[0];
+        fileNameEl.textContent = file.name;
+        filePreview.style.display = 'inline-flex';
+        // Clear textarea so server knows to use the file
+        textInput.value = '';
+        wordDisplay.innerText = 'File attached — ready to scan';
+        scanBtn.disabled = false;
+    }
+
+    function removeFile() {
+        fileInputEl.value = '';
+        filePreview.style.display = 'none';
+        textInput.placeholder = 'Paste or type the text you want to analyse for AI-generated content...';
+        updateWordCount();
+    }
+
+    /* ── Loader ── */
+    const radarTitles   = ['AI PATTERN RECOGNITION','LINGUISTIC ENTROPY SCAN','PERPLEXITY MAPPING','BURSTINESS ANALYSIS','COMPILING VERDICT'];
+    const radarStatuses = ['Initialising neural sweep...','Measuring token probability chains...','Mapping sentence-level entropy...','Cross-referencing LLM fingerprints...','Finalising confidence scores...'];
+
+    function spawnBlip() {
+        const wrap  = document.getElementById('radarWrap');
+        const angle = Math.random() * 2 * Math.PI;
+        const dist  = Math.random() * 125;
+        const x = 140 + dist * Math.cos(angle);
+        const y = 140 + dist * Math.sin(angle);
+        const blip = document.createElement('div');
+        blip.className = 'radar-blip';
+        blip.style.left = x + 'px'; blip.style.top = y + 'px';
+        blip.style.animationDuration = (1.5 + Math.random()) + 's';
+        wrap.appendChild(blip);
+        setTimeout(() => blip.remove(), 3000);
+    }
+
+    const form   = document.getElementById('aiForm');
+    const loader = document.getElementById('loader');
+
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const hasText = textInput.value.trim();
+            const hasFile = fileInputEl.files.length > 0;
+            if (!hasText && !hasFile) { e.preventDefault(); alert('Please paste text or attach a file.'); return; }
+            loader.style.display = 'flex';
+            const titleEl    = document.getElementById('radar-title');
+            const statusEl   = document.getElementById('radar-status');
+            const progressEl = document.getElementById('readout-progress');
+            const contactsEl = document.getElementById('readout-contacts');
+            const signalEl   = document.getElementById('readout-signal');
+            let progress = 0, phase = 0, contacts = 0;
+            setInterval(() => { progress = Math.min(progress + Math.floor(Math.random()*3)+1, 99); progressEl.innerText = progress + '%'; }, 320);
+            setInterval(() => { phase = (phase+1) % radarTitles.length; titleEl.innerText = radarTitles[phase]; statusEl.innerText = radarStatuses[phase]; }, 3200);
+            setInterval(() => { spawnBlip(); contacts++; contactsEl.innerText = contacts; }, 600);
+            const signals = ['STRONG','WEAK','MODERATE','—'];
+            setInterval(() => { signalEl.innerText = signals[Math.floor(Math.random()*signals.length)]; }, 700);
+        });
+    }
+
+    /* ── Animate result ring & bars ── */
+    document.addEventListener('DOMContentLoaded', function() {
+        const fill      = document.getElementById('scoreRingFill');
+        const scoreDisp = document.getElementById('scoreDisplay');
+        const verdictEl = document.getElementById('verdictText');
+        const barAI     = document.getElementById('barAI');
+        const barHuman  = document.getElementById('barHuman');
+        if (!fill) return;
+        {% if result %}
+        const aiScore    = {{ result.ai_score }};
+        const humanScore = {{ result.human_score }};
+        const circumference = 376.99;
+        const ringColor = aiScore >= 70 ? '#ef4444' : aiScore >= 40 ? '#f59e0b' : '#22c55e';
+        fill.style.stroke = ringColor;
+        setTimeout(() => { fill.style.strokeDashoffset = circumference - (aiScore/100)*circumference; }, 200);
+        let current = 0;
+        const counter = setInterval(() => { current = Math.min(current+2, aiScore); scoreDisp.innerText = current+'%'; if(current>=aiScore) clearInterval(counter); }, 25);
+        verdictEl.innerText = aiScore>=80?'Very likely AI-generated':aiScore>=50?'Possibly AI-assisted':aiScore>=20?'Mostly human-written':'Human-written';
+        verdictEl.style.color = ringColor;
+        setTimeout(() => { barAI.style.width = aiScore+'%'; barHuman.style.width = humanScore+'%'; }, 300);
+        {% endif %}
+    });
+
+    /* ── PDF Report Download ── */
+    function downloadAIReport() {
+        {% if result %}
+        const aiScore    = {{ result.ai_score }};
+        const humanScore = {{ result.human_score }};
+        const verdict    = aiScore>=80?'Very likely AI-generated':aiScore>=50?'Possibly AI-assisted':aiScore>=20?'Mostly human-written':'Human-written';
+        const ringColor  = aiScore>=70?'#ef4444':aiScore>=40?'#f59e0b':'#22c55e';
+        const now        = new Date().toLocaleString();
+        const analysisEl = document.getElementById('analysisText');
+        const plainText  = analysisEl ? analysisEl.innerText : '';
+
+        const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <title>IntellectCheck — AI Detection Report</title>
+        <style>
+            *{margin:0;padding:0;box-sizing:border-box;}
+            body{font-family:'Segoe UI',Arial,sans-serif;background:#0f172a;color:#f8fafc;padding:40px;}
+            .header{display:flex;align-items:center;justify-content:space-between;border-bottom:2px solid #64ffda;padding-bottom:20px;margin-bottom:30px;}
+            .brand{font-size:1.6rem;font-weight:800;color:#64ffda;letter-spacing:2px;}
+            .meta{font-size:0.8rem;color:#94a3b8;text-align:right;}
+            .score-row{display:flex;gap:20px;margin-bottom:30px;flex-wrap:wrap;}
+            .score-card{flex:1;min-width:140px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:20px;text-align:center;}
+            .score-val{font-size:2.8rem;font-weight:900;color:${ringColor};}
+            .score-lbl{font-size:0.75rem;color:#94a3b8;text-transform:uppercase;letter-spacing:1px;margin-top:4px;}
+            .verdict-box{background:rgba(100,255,218,0.07);border:1px solid rgba(100,255,218,0.2);border-radius:14px;padding:18px 22px;margin-bottom:26px;}
+            .verdict-title{font-size:1.2rem;font-weight:700;color:${ringColor};margin-bottom:6px;}
+            .verdict-desc{color:#94a3b8;font-size:0.9rem;line-height:1.6;}
+            .section-title{font-size:0.85rem;font-weight:700;color:#64ffda;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;}
+            .analysis-box{background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;font-size:0.9rem;line-height:1.8;color:#cbd5e1;white-space:pre-wrap;word-break:break-word;}
+            .footer{margin-top:30px;border-top:1px solid rgba(255,255,255,0.1);padding-top:16px;font-size:0.75rem;color:#475569;text-align:center;}
+        </style></head><body>
+        <div class="header">
+            <div class="brand">⬡ IntellectCheck AI</div>
+            <div class="meta">AI Detection Report<br>${now}</div>
+        </div>
+        <div class="score-row">
+            <div class="score-card"><div class="score-val">${aiScore}%</div><div class="score-lbl">AI Probability</div></div>
+            <div class="score-card"><div class="score-val" style="color:#22c55e;">${humanScore}%</div><div class="score-lbl">Human Written</div></div>
+            <div class="score-card"><div class="score-val" style="font-size:1.2rem;padding-top:10px;color:${ringColor};">${verdict}</div><div class="score-lbl">Verdict</div></div>
+        </div>
+        <div class="verdict-box">
+            <div class="verdict-title">${verdict}</div>
+            <div class="verdict-desc">${aiScore>=80?'Very high probability this content was generated by an AI language model.':aiScore>=50?'Moderate AI signals detected. Some sections may be machine-written.':aiScore>=20?'Low-level AI patterns present. Mostly appears human-authored.':'Strong indicators of human authorship. No significant AI patterns detected.'}</div>
+        </div>
+        <div class="section-title">Sentence-Level Analysis</div>
+        <div class="analysis-box">${plainText.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
+        <div class="footer">Generated by IntellectCheck AI &nbsp;|&nbsp; ${now} &nbsp;|&nbsp; For educational purposes only</div>
+        </body></html>`;
+
+        const blob = new Blob([html], {type:'text/html'});
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href = url; a.download = 'IntellectCheck_AI_Report.html';
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a); URL.revokeObjectURL(url);
+        {% endif %}
+    }
+</script>
 {% endblock %}
